@@ -182,11 +182,13 @@ function render(){
     else{ctx.fillStyle='#4f4';ctx.beginPath();ctx.arc(gs.x,gs.y,18,0,M.PI*2);ctx.fill()}
     ctx.strokeStyle='rgba(80,255,130,0.4)';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(gs.x,gs.y,26,0,M.PI*2);ctx.stroke();ctx.setLineDash([]);
   }
-  if(pl){var ps=w2s(pl.x,pl.y),show=now>pl.inv||M.floor(now/70)%2===0;
-    if(show&&imgs.p){ctx.save();ctx.translate(ps.x,ps.y);ctx.rotate(pl.h+M.PI/2);
-      var fl=M.abs(M.sin(t/60))*0.3+0.7;ctx.fillStyle='#ff8800';ctx.beginPath();ctx.moveTo(-6,22);ctx.lineTo(0,22+20*fl);ctx.lineTo(6,22);ctx.closePath();ctx.fill();
+  // Player rocket - always visible, no blinking
+  if(pl){var ps=w2s(pl.x,pl.y);
+    if(imgs.p){ctx.save();ctx.translate(ps.x,ps.y);ctx.rotate(pl.h+M.PI/2);
+      var fl=M.abs(M.sin(t/60))*0.3+0.7;ctx.fillStyle='rgba(255,136,0,0.8)';ctx.beginPath();ctx.moveTo(-6,22);ctx.lineTo(0,22+20*fl);ctx.lineTo(6,22);ctx.closePath();ctx.fill();
       ctx.drawImage(imgs.p,-30,-30,60,60);ctx.restore()}
-    if(now<pl.inv){ctx.strokeStyle='rgba(180,220,255,'+(0.3+M.sin(now/35)*0.3)+')';ctx.lineWidth=4;ctx.beginPath();ctx.arc(ps.x,ps.y,32,0,M.PI*2);ctx.stroke()}
+    // Shield ring during invincibility
+    if(now<pl.inv){ctx.strokeStyle='rgba(100,200,255,'+(0.4+M.sin(now/30)*0.3)+')';ctx.lineWidth=5;ctx.beginPath();ctx.arc(ps.x,ps.y,36,0,M.PI*2);ctx.stroke()}
     ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(ps.x-18,ps.y-36,36,5);ctx.fillStyle=pl.hp>50?'#4f4':pl.hp>25?'#fa3':'#f33';ctx.fillRect(ps.x-18,ps.y-36,36*(pl.hp/100),5);
   }
   for(var i=0;i<pts.length;i++){var p2=pts[i],ps3=w2s(p2.x,p2.y);ctx.globalAlpha=p2.l;ctx.fillStyle=p2.c;ctx.beginPath();ctx.arc(ps3.x,ps3.y,p2.s*p2.l,0,M.PI*2);ctx.fill()}ctx.globalAlpha=1;
