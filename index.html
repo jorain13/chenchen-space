@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>辰辰的宇宙历险记 🚀</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#000; overflow:hidden;
+    font-family:'Arial','PingFang SC','Microsoft YaHei',sans-serif;
+    cursor:crosshair; user-select:none; -webkit-user-select:none;
+    -webkit-touch-callout:none; touch-action:manipulation;
+    position:fixed; width:100vw; height:100vh; overscroll-behavior:none;
+  }
+  canvas { display:block; }
+
+  #hud {
+    position:fixed; top:0; left:0; right:0;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:6px 10px; pointer-events:none; z-index:10;
+    padding-top:max(6px, env(safe-area-inset-top));
+  }
+  .hud-item {
+    background:rgba(0,0,0,0.65); border:2px solid rgba(255,255,255,0.25);
+    border-radius:16px; padding:8px 14px; color:#fff; font-size:13px;
+    backdrop-filter:blur(8px); display:flex; align-items:center; gap:6px;
+    font-weight:bold; text-shadow:0 0 6px rgba(255,255,255,0.3);
+  }
+  .hud-icon { font-size:20px; }
+  .hud-bar-wrap { width:70px; height:10px; background:rgba(255,255,255,0.15); border-radius:6px; overflow:hidden; }
+  .hud-bar { height:100%; border-radius:6px; }
+  .hp-bar { background:linear-gradient(90deg,#ff3333,#ff7777); box-shadow:0 0 8px rgba(255,50,50,0.4); }
+  .ammo-bar { background:linear-gradient(90deg,#ff9900,#ffcc44); box-shadow:0 0 8px rgba(255,150,0,0.4); }
+  .speed-bar { background:linear-gradient(90deg,#44ccff,#88eeff); box-shadow:0 0 8px rgba(50,200,255,0.4); }
+  .hud-val { font-size:13px; min-width:32px; text-align:center; }
+  #hud-center { color:#88ddff; text-align:center; font-weight:bold; font-size:12px; line-height:1.4; text-shadow:0 0 8px rgba(100,200,255,0.4); }
+
+  #messages { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; z-index:20; text-align:center; }
+  .msg { color:#fff; font-size:30px; font-weight:bold; text-shadow:0 0 20px rgba(255,255,255,0.8),0 0 40px #00aaff; animation:msgFade 2s ease forwards; margin:4px 0; }
+  .msg-good { color:#44ffaa; text-shadow:0 0 20px #44ff88; }
+  .msg-warn { color:#ffdd44; text-shadow:0 0 20px #ffdd44; }
+  @keyframes msgFade {
+    0%{opacity:0;transform:translateY(10px) scale(0.6)}
+    15%{opacity:1;transform:translateY(0) scale(1.1)}
+    25%{opacity:1;transform:translateY(0) scale(1)}
+    75%{opacity:1}
+    100%{opacity:0;transform:translateY(-20px)}
+  }
+
+  #overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,10,0.75); display:flex; align-items:center; justify-content:center; z-index:30; }
+  #overlay.off { display:none; }
+  .ov-box { background:rgba(8,8,40,0.95); border:2px solid rgba(100,200,255,0.4); border-radius:28px; padding:36px; text-align:center; color:#fff; max-width:440px; width:90%; box-shadow:0 0 80px rgba(0,120,255,0.25); }
+  .ov-box h1 { font-size:38px; margin-bottom:6px; background:linear-gradient(135deg,#ffdd44,#ff8822); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; filter:drop-shadow(0 0 15px #ff8800); }
+  .ov-box h2 { font-size:20px; color:#aaddff; margin-bottom:14px; }
+  .ov-box .desc { font-size:14px; color:#8899bb; margin-bottom:22px; line-height:1.8; }
+  .ov-box .stat { font-size:16px; margin:5px 0; }
+  .ov-box .stat b { color:#ffdd44; }
+  .btn { display:inline-block; padding:14px 36px; margin:6px; font-size:19px; font-weight:bold; border:none; border-radius:30px; cursor:pointer; font-family:inherit; letter-spacing:1px; background:linear-gradient(135deg,#ff6622,#ee3300); color:#fff; box-shadow:0 6px 20px rgba(255,80,0,0.4); transition:transform 0.15s; }
+  .btn:active { transform:scale(0.94); }
+  .btn-sm { padding:8px 20px; font-size:14px; background:linear-gradient(135deg,#666,#444); }
+  .ctrl-info { margin-top:18px; font-size:12px; color:#6688aa; line-height:1.8; }
+  .ctrl-info kbd { display:inline-block; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.25); border-radius:5px; padding:2px 8px; margin:0 2px; font-size:11px; color:#ddd; }
+
+  /* Touch Controls */
+  #dpad { position:fixed; bottom:28px; left:16px; z-index:15; width:170px; height:170px; }
+  .dbtn { position:absolute; width:56px; height:56px; background:rgba(255,255,255,0.08); border:2.5px solid rgba(255,255,255,0.3); border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:26px; color:rgba(255,255,255,0.7); user-select:none; -webkit-tap-highlight-color:transparent; backdrop-filter:blur(4px); }
+  .dbtn.on { background:rgba(255,255,255,0.25); border-color:rgba(255,255,255,0.65); box-shadow:0 0 20px rgba(200,220,255,0.3); color:#fff; }
+  #dup{top:0;left:57px} #ddown{bottom:0;left:57px} #dleft{top:57px;left:0} #dright{top:57px;right:0}
+  #shoot-zone { position:fixed; bottom:38px; right:24px; z-index:15; }
+  #bshoot { width:96px; height:96px; border-radius:50%; background:radial-gradient(circle at 38% 32%,rgba(255,100,30,0.8),rgba(200,30,0,0.55)); border:3.5px solid rgba(255,130,70,0.7); color:#fff; font-size:19px; font-weight:bold; letter-spacing:2px; display:flex; align-items:center; justify-content:center; user-select:none; -webkit-tap-highlight-color:transparent; box-shadow:0 0 35px rgba(255,60,0,0.5),inset 0 0 25px rgba(255,255,200,0.08); text-shadow:0 0 10px rgba(255,255,255,0.8); transition:transform 0.1s; }
+  #bshoot.on { transform:scale(0.88); background:radial-gradient(circle at 38% 32%,rgba(255,180,60,1),rgba(255,70,20,0.9)); border-color:rgba(255,220,130,0.95); box-shadow:0 0 55px rgba(255,100,0,0.8); }
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div class="hud-item"><span class="hud-icon">❤️</span><div class="hud-bar-wrap"><div class="hud-bar hp-bar" id="hpBar" style="width:100%"></div></div><span class="hud-val" id="hpVal">100</span></div>
+  <div id="hud-center">🌌 第 <b id="lvTxt">1</b> 关</div>
+  <div class="hud-item"><span class="hud-icon">🔫</span><div class="hud-bar-wrap"><div class="hud-bar ammo-bar" id="amBar" style="width:100%"></div></div><span class="hud-val" id="amVal">100</span></div>
+  <div class="hud-item"><span class="hud-icon">⚡</span><div class="hud-bar-wrap"><div class="hud-bar speed-bar" id="spBar" style="width:100%"></div></div><span class="hud-val" id="spVal">100%</span></div>
+</div>
+<div id="messages"></div>
+<div id="overlay"><div class="ov-box" id="ovC"></div></div>
+
+<div id="dpad">
+  <button class="dbtn" id="dup">▲</button>
+  <button class="dbtn" id="ddown">▼</button>
+  <button class="dbtn" id="dleft">◀</button>
+  <button class="dbtn" id="dright">▶</button>
+</div>
+<div id="shoot-zone"><button id="bshoot">射 击</button></div>
+
+<canvas id="c"></canvas>
+
+<script>
+// ==================== 🌟 辰辰的宇宙历险记 ====================
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+
+// --- Asset paths ---
+const ASSETS = {
+  player:'主角.png', map:'大地图.png', redAlien:'红色外星人.png', greenAlien:'绿色外星人.png'
+};
+const IMG = {};
+
+function loadImg(k,p){ return new Promise(r=>{ const i=new Image(); i.onload=()=>{IMG[k]=i;r();}; i.onerror=()=>r(); i.src=p; }); }
+
+// --- 🌍 World ---
+const W = 1400, H = 786;
+const EARTH = { x:W*0.5, y:H*0.63, r:90 };
+
+// Planet collision zones — drawn as actual planets on the map, so these are collision boundaries
+const PLANETS = [
+  { x:W*0.16, y:H*0.26, r:55 },
+  { x:W*0.84, y:H*0.37, r:62 },
+  { x:W*0.32, y:H*0.72, r:45 },
+  { x:W*0.76, y:H*0.78, r:48 },
+  { x:W*0.5,  y:H*0.18, r:42 },
+  { x:W*0.62, y:H*0.55, r:38 },
+];
+
+// --- 📐 Sizes (larger! ~1/3 of small planet ≈ 40-50px radius → sprite ~90-120px) ---
+const S = {
+  player: 110,      // rocket sprite size
+  alienW: 85,       // alien width
+  alienH: 48,       // alien height
+  bullet: 5,        // bullet radius
+};
+
+// --- ⚖️ Game balance ---
+const CFG = {
+  maxHP: 100, maxAmmo: 100,
+  heal: 10,           // HP/sec near earth
+  redHP: 9,           // 3 shots to kill
+  pDmg: 3,            // player damage per shot
+  eDmg: 2,            // enemy damage per hit
+  pBaseSpeed: 3.5,    // base player speed
+  pBoostSpeed: 6.5,   // boosted player speed
+  pMinSpeed: 1.8,     // minimum speed (decayed)
+  speedDecay: 0.015,  // speed decay per frame
+  speedRecover: 0.03, // speed recovery per frame near earth
+  boostDuration: 3000,// speed boost duration ms
+  redSpeed: 1.3,
+  greenSpeed: 1.6,
+  pBulletSpeed: 8,
+  eBulletSpeed: 4.2,
+  shootCD: 180,       // ms
+  eShootCD: 1600,     // ms
+  invTime: 600,       // ms invincible after hit
+  packLife: 700,      // energy pack lifetime in frames
+};
+
+// --- 🎮 State ---
+let gameState = 'title', level = 1, score = 0, player = null;
+let reds = [], greens = [], pBulls = [], eBulls = [], packs = [], parts = [];
+let keys = {}, mouse = {x:0,y:0,down:false};
+let cam = {x:0,y:0}, lt = 0, lastShot = 0, killed = 0;
+let dState = {up:false,down:false,left:false,right:false}, sState = false;
+let nextPackSpawn = 0;
+
+// --- 🔧 Helpers ---
+const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+const ang = (a,b) => Math.atan2(b.y-a.y, b.x-a.x);
+const rnd = (a,b) => a+Math.random()*(b-a);
+const rndEdge = () => { const m=50; const s=Math.floor(Math.random()*4); return s===0?{x:rnd(m,W-m),y:-m}:s===1?{x:rnd(m,W-m),y:H+m}:s===2?{x:-m,y:rnd(m,H-m)}:{x:W+m,y:rnd(m,H-m)}; };
+const nearEarth = p => dist(p,EARTH)<EARTH.r;
+const onPlanet = p => { for(const pl of PLANETS) if(dist(p,pl)<pl.r+S.player*0.22) return true; return false; };
+
+function msg(text, cls='') {
+  const el = document.createElement('div');
+  el.className = 'msg '+cls; el.textContent = text;
+  document.getElementById('messages').appendChild(el);
+  setTimeout(()=>el.remove(), 2200);
+}
+
+function partsSpawn(x,y,color,n=12) {
+  for(let i=0;i<n;i++){ const a=Math.random()*Math.PI*2, s=rnd(1.5,5); parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,decay:rnd(0.015,0.05),color,size:rnd(2,5)}); }
+}
+
+// --- 🏗️ Init ---
+function mkPlayer(){ return {x:W*0.5,y:H*0.55,hp:CFG.maxHP,ammo:CFG.maxAmmo,inv:0,speed:CFG.pBaseSpeed,boostUntil:0}; }
+function mkRed(){ return {...rndEdge(), hp:CFG.redHP, maxHp:CFG.redHP, lastShot:performance.now()+rnd(0,CFG.eShootCD), cd:CFG.eShootCD+rnd(-400,600)}; }
+function mkGreen(){ return {...rndEdge(), wAng:Math.random()*Math.PI*2, wTime:performance.now()+rnd(1000,3500), eAmt:Math.random()<0.5?20:50}; }
+function mkPack(x,y,type){
+  return {x,y,type,life:CFG.packLife,vy:-0.5+Math.random()*-0.3,bob:Math.random()*Math.PI*2};
+}
+
+function initLvl(lv) {
+  const n = 3 + (lv-1)*2;
+  const gn = Math.max(1, Math.floor(lv/2));
+  reds = Array.from({length:n}, mkRed);
+  greens = Array.from({length:gn}, mkGreen);
+  pBulls=[]; eBulls=[]; packs=[]; parts=[];
+  killed=0; nextPackSpawn=performance.now()+rnd(3000,8000);
+}
+
+function startGame() {
+  level=1; score=0; player=mkPlayer();
+  initLvl(1); gameState='playing';
+  document.getElementById('overlay').classList.add('off');
+  updHUD();
+}
+
+function nextLvl() {
+  level++;
+  player.hp=Math.min(CFG.maxHP, player.hp+35);
+  player.ammo=Math.min(CFG.maxAmmo, player.ammo+35);
+  player.inv=0; player.speed=CFG.pBaseSpeed; player.boostUntil=0;
+  initLvl(level); gameState='playing';
+  document.getElementById('overlay').classList.add('off');
+  msg(`🌟 第 ${level} 关 · ${reds.length}个外星人来了！`,'msg-warn');
+  updHUD();
+}
+
+function endGame(why) {
+  gameState='gameover';
+  document.getElementById('overlay').classList.remove('off');
+  document.getElementById('ovC').innerHTML=`
+    <h1>💥 游戏结束</h1><h2>${why}</h2>
+    <div class="stat">关卡：<b>第 ${level} 关</b></div>
+    <div class="stat">得分：<b>${score}</b></div>
+    <div class="stat">击毁：<b>${killed} 个外星人</b></div><br>
+    <button class="btn" onclick="startGame()">🔄 重新开始</button>`;
+}
+
+function winLvl() {
+  gameState='levelComplete'; score+=level*200;
+  document.getElementById('overlay').classList.remove('off');
+  document.getElementById('ovC').innerHTML=`
+    <h1>🎉 太棒了！</h1><h2>第 ${level} 关 通关！</h2>
+    <div class="stat">得分：<b>${score}</b></div>
+    <div class="stat">血量：<b>${Math.round(player.hp)}</b></div>
+    <div class="stat">弹药：<b>${player.ammo}</b></div>
+    <div class="stat">下关敌人：<b>${3+level*2} 个</b></div><br>
+    <button class="btn" onclick="nextLvl()">▶️ 进入第 ${level+1} 关</button><br>
+    <button class="btn btn-sm" onclick="startGame()">🔄 重新开始</button>`;
+}
+
+function updHUD() {
+  if(!player) return;
+  const hpP=Math.max(0,player.hp/CFG.maxHP*100);
+  const amP=Math.max(0,player.ammo/CFG.maxAmmo*100);
+  const spP=Math.max(0,(player.speed-CFG.pMinSpeed)/(CFG.pBoostSpeed-CFG.pMinSpeed)*100);
+  document.getElementById('hpBar').style.width=hpP+'%';
+  document.getElementById('hpVal').textContent=Math.max(0,Math.round(player.hp));
+  document.getElementById('amBar').style.width=amP+'%';
+  document.getElementById('amVal').textContent=player.ammo;
+  document.getElementById('spBar').style.width=spP+'%';
+  document.getElementById('spVal').textContent=Math.round(spP)+'%';
+  document.getElementById('lvTxt').textContent=level;
+  document.getElementById('hud-center').innerHTML=`🌌 第 <b>${level}</b> 关 &nbsp;|&nbsp; 👾<b>${reds.length}</b> &nbsp;|&nbsp; ⭐<b>${score}</b>`;
+}
+
+// --- 📱 Touch ---
+const at = new Map();
+function tTarget(t){
+  const el=document.elementFromPoint(t.clientX,t.clientY);
+  if(!el) return null;
+  if(el.id==='dup'||el.closest('#dup')) return 'up';
+  if(el.id==='ddown'||el.closest('#ddown')) return 'down';
+  if(el.id==='dleft'||el.closest('#dleft')) return 'left';
+  if(el.id==='dright'||el.closest('#dright')) return 'right';
+  if(el.id==='bshoot'||el.closest('#bshoot')) return 'shoot';
+  return null;
+}
+function setBtn(t,on){
+  if(t==='shoot'){ sState=on; document.getElementById('bshoot').classList.toggle('on',on); }
+  else { dState[t]=on; document.getElementById('d'+t).classList.toggle('on',on); }
+}
+document.addEventListener('touchstart',e=>{if(gameState==='title')return;e.preventDefault();for(const t of e.changedTouches){const ty=tTarget(t);if(ty){at.set(t.identifier,ty);setBtn(ty,true);}}},{passive:false});
+document.addEventListener('touchmove',e=>{if(gameState!=='playing')return;e.preventDefault();for(const t of e.changedTouches){const o=at.get(t.identifier),n=tTarget(t);if(o&&o!==n){setBtn(o,false);at.delete(t.identifier);}if(n&&n!==o){at.set(t.identifier,n);setBtn(n,true);}if(!n&&o){setBtn(o,false);at.delete(t.identifier);}}},{passive:false});
+document.addEventListener('touchend',e=>{e.preventDefault();for(const t of e.changedTouches){const ty=at.get(t.identifier);if(ty){setBtn(ty,false);at.delete(t.identifier);}}},{passive:false});
+document.addEventListener('touchcancel',e=>{for(const t of e.changedTouches){const ty=at.get(t.identifier);if(ty){setBtn(ty,false);at.delete(t.identifier);}}});
+
+// --- ⌨️ Keyboard ---
+window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' ')e.preventDefault();});
+window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+window.addEventListener('mousedown',e=>{if(e.button===0)mouse.down=true;});
+window.addEventListener('mouseup',e=>{if(e.button===0)mouse.down=false;});
+
+// --- 🎯 Shoot ---
+function aimDir(){
+  if(!player) return -Math.PI/2;
+  if(mouse.x||mouse.y) return ang(player,{x:mouse.x+cam.x,y:mouse.y+cam.y});
+  let dx=0,dy=0;
+  if(dState.up||keys['w']||keys['arrowup']) dy-=1;
+  if(dState.down||keys['s']||keys['arrowdown']) dy+=1;
+  if(dState.left||keys['a']||keys['arrowleft']) dx-=1;
+  if(dState.right||keys['d']||keys['arrowright']) dx+=1;
+  if(dx||dy) return Math.atan2(dy,dx);
+  if(reds.length){ let b=null,bd=Infinity; for(const a of reds){const d=dist(player,a);if(d<bd){bd=d;b=a;}} if(b)return ang(player,b); }
+  return -Math.PI/2;
+}
+
+function doShoot(now){
+  if(!player||gameState!=='playing'||player.ammo<=0) return;
+  if(now-lastShot<CFG.shootCD) return;
+  lastShot=now; player.ammo--;
+  const a=aimDir();
+  pBulls.push({x:player.x,y:player.y,vx:Math.cos(a)*CFG.pBulletSpeed,vy:Math.sin(a)*CFG.pBulletSpeed,life:90});
+  updHUD();
+}
+
+function eShoot(alien,now){
+  if(now-alien.lastShot<alien.cd) return;
+  alien.lastShot=now;
+  const a=ang(alien,player);
+  eBulls.push({x:alien.x,y:alien.y,vx:Math.cos(a)*CFG.eBulletSpeed,vy:Math.sin(a)*CFG.eBulletSpeed,life:130});
+}
+
+// --- 📷 Camera ---
+const s2w = (sx,sy)=>({x:sx+cam.x,y:sy+cam.y});
+const w2s = (wx,wy)=>({x:wx-cam.x,y:wy-cam.y});
+function updCam(){
+  if(!player) return;
+  cam.x=player.x-c.width/2; cam.y=player.y-c.height/2;
+  cam.x=Math.max(0,Math.min(W-c.width,cam.x));
+  cam.y=Math.max(0,Math.min(H-c.height,cam.y));
+}
+
+// --- 🔄 Update ---
+function update(dt){
+  if(gameState!=='playing') return;
+  const now=performance.now(), p=player;
+  if(!p) return;
+
+  // --- Move ---
+  let dx=0,dy=0;
+  if(keys['w']||keys['arrowup']||dState.up) dy-=1;
+  if(keys['s']||keys['arrowdown']||dState.down) dy+=1;
+  if(keys['a']||keys['arrowleft']||dState.left) dx-=1;
+  if(keys['d']||keys['arrowright']||dState.right) dx+=1;
+  if(dx&&dy){dx*=0.707;dy*=0.707;}
+
+  p.x+=dx*p.speed*(dt/16); p.y+=dy*p.speed*(dt/16);
+  p.x=Math.max(30,Math.min(W-30,p.x)); p.y=Math.max(30,Math.min(H-30,p.y));
+
+  // --- Speed decay ---
+  if(now>p.boostUntil){
+    // Decay toward min speed
+    if(p.speed>CFG.pBaseSpeed) p.speed=Math.max(CFG.pBaseSpeed, p.speed-CFG.speedDecay*1.5*(dt/16));
+    else p.speed=Math.max(CFG.pMinSpeed, p.speed-CFG.speedDecay*(dt/16));
+  }
+
+  // Near earth: recover speed + heal
+  if(nearEarth(p)){
+    p.hp=Math.min(CFG.maxHP,p.hp+CFG.heal*(dt/1000));
+    if(now>p.boostUntil && p.speed<CFG.pBaseSpeed) p.speed=Math.min(CFG.pBaseSpeed, p.speed+CFG.speedRecover*(dt/16));
+    updHUD();
+  }
+
+  // Boost expiration
+  if(now>p.boostUntil && p.speed>CFG.pBaseSpeed) p.speed=Math.max(CFG.pBaseSpeed,p.speed-0.03*(dt/16));
+
+  // --- Shoot ---
+  if(keys[' ']||keys['spacebar']||keys['j']||mouse.down||sState) doShoot(now);
+
+  // --- Planet collision ---
+  if(onPlanet(p)){ partsSpawn(p.x,p.y,'#ff8844',40); endGame('💫 撞到了星球！'); return; }
+
+  // --- Player bullets ---
+  for(let i=pBulls.length-1;i>=0;i--){
+    const b=pBulls[i];
+    b.x+=b.vx*(dt/16); b.y+=b.vy*(dt/16); b.life--;
+    if(b.x<-60||b.x>W+60||b.y<-60||b.y>H+60||b.life<=0){ pBulls.splice(i,1); continue; }
+    // Hit red alien
+    for(let j=reds.length-1;j>=0;j--){
+      const a=reds[j];
+      if(dist(b,a)<S.alienW*0.55){
+        a.hp-=CFG.pDmg; partsSpawn(b.x,b.y,'#ff6644',8); pBulls.splice(i,1);
+        if(a.hp<=0){ partsSpawn(a.x,a.y,'#ffaa44',25); reds.splice(j,1); killed++; score+=100; updHUD(); if(reds.length===0){ score+=level*250; setTimeout(winLvl,600); } }
+        break;
+      }
+    }
+    // Hit green alien = game over
+    if(i>=0){ for(const g of greens){ if(dist(b,g)<S.alienW*0.55){ partsSpawn(b.x,b.y,'#ff2222',18); pBulls.splice(i,1); endGame('💔 误伤了绿色好朋友！'); return; } } }
+  }
+
+  // --- Enemy bullets ---
+  for(let i=eBulls.length-1;i>=0;i--){
+    const b=eBulls[i];
+    b.x+=b.vx*(dt/16); b.y+=b.vy*(dt/16); b.life--;
+    if(b.x<-60||b.x>W+60||b.y<-60||b.y>H+60||b.life<=0){ eBulls.splice(i,1); continue; }
+    if(now>p.inv && dist(b,p)<S.player*0.35){
+      p.hp-=CFG.eDmg; p.inv=now+CFG.invTime; partsSpawn(p.x,p.y,'#ff3333',10); eBulls.splice(i,1); updHUD();
+      if(p.hp<=0){ partsSpawn(p.x,p.y,'#ff6600',35); endGame('💥 火箭被击毁了！'); return; }
+    }
+  }
+
+  // --- Red aliens ---
+  for(const a of reds){
+    const ag=ang(a,p);
+    a.x+=Math.cos(ag)*CFG.redSpeed*(dt/16); a.y+=Math.sin(ag)*CFG.redSpeed*(dt/16);
+    a.x=Math.max(40,Math.min(W-40,a.x)); a.y=Math.max(40,Math.min(H-40,a.y));
+    eShoot(a,now);
+  }
+
+  // --- Green aliens ---
+  for(const g of greens){
+    if(now>g.wTime){ g.wAng=Math.random()*Math.PI*2; g.wTime=now+rnd(1000,3500); }
+    g.x+=Math.cos(g.wAng)*CFG.greenSpeed*(dt/16); g.y+=Math.sin(g.wAng)*CFG.greenSpeed*(dt/16);
+    g.x=Math.max(40,Math.min(W-40,g.x)); g.y=Math.max(40,Math.min(H-40,g.y));
+    // Drop ammo pack when player needs it
+    if(p.ammo<40 && dist(g,p)<130 && Math.random()<0.004*(dt/16)){
+      packs.push(mkPack(g.x,g.y,'ammo'));
+      partsSpawn(g.x,g.y,'#44ff88',10);
+      const ep=rndEdge(); g.x=ep.x; g.y=ep.y; g.eAmt=Math.random()<0.5?20:50;
+    }
+  }
+
+  // --- Random speed-boost packs ---
+  if(now>nextPackSpawn){
+    const px=rnd(80,W-80), py=rnd(80,H-80);
+    packs.push(mkPack(px,py,'boost'));
+    nextPackSpawn=now+rnd(4000,10000);
+  }
+
+  // --- Energy packs ---
+  for(let i=packs.length-1;i>=0;i--){
+    const pk=packs[i];
+    pk.y+=pk.vy*(dt/16); pk.life--;
+    if(dist(pk,p)<38){
+      if(pk.type==='ammo'){
+        const amt=p.ammo<50?50:20;
+        p.ammo=Math.min(CFG.maxAmmo,p.ammo+amt);
+        partsSpawn(pk.x,pk.y,'#44ffaa',15);
+        msg(`🔫 +${amt} 弹药！`,'msg-good');
+      } else {
+        p.speed=CFG.pBoostSpeed;
+        p.boostUntil=now+CFG.boostDuration;
+        partsSpawn(pk.x,pk.y,'#ffdd44',18);
+        msg('⚡ 加速！冲啊！','msg-good');
+      }
+      packs.splice(i,1); updHUD(); continue;
+    }
+    if(pk.life<=0||pk.y>H+50){ packs.splice(i,1); }
+  }
+
+  // --- Particles ---
+  for(let i=parts.length-1;i>=0;i--){ const pt=parts[i]; pt.x+=pt.vx*(dt/16); pt.y+=pt.vy*(dt/16); pt.life-=pt.decay*(dt/16); if(pt.life<=0)parts.splice(i,1); }
+
+  updCam();
+
+  // --- Respawn greens ---
+  const tg=Math.max(1,Math.floor(level/2));
+  if(greens.length<tg && Math.random()<0.003*(dt/16)){ greens.push(mkGreen()); }
+
+  p.hp=Math.max(0,Math.min(CFG.maxHP,p.hp)); p.ammo=Math.max(0,Math.min(CFG.maxAmmo,p.ammo));
+  p.speed=Math.max(CFG.pMinSpeed,Math.min(CFG.pBoostSpeed,p.speed));
+}
+
+// --- 🎨 Render ---
+function render(){
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.fillStyle='#05051a'; ctx.fillRect(0,0,c.width,c.height);
+
+  // --- Starfield background ---
+  const now=performance.now();
+
+  // --- Map ---
+  if(IMG.map) ctx.drawImage(IMG.map, -cam.x, -cam.y, W, H);
+  else {
+    // Generate cute starfield
+    ctx.fillStyle='#0a0a2e'; ctx.fillRect(0,0,c.width,c.height);
+    // Twinkling stars (pseudo-random based on position so they stay still)
+    for(let i=0;i<80;i++){
+      const sx=(i*173+53)%W, sy=(i*271+97)%H;
+      const ss=w2s(sx,sy);
+      if(ss.x<-5||ss.x>c.width+5||ss.y<-5||ss.y>c.height+5)continue;
+      const twinkle=Math.sin(now/800+i*3)*0.4+0.6;
+      ctx.fillStyle=`rgba(255,255,255,${0.3+twinkle*0.5})`;
+      ctx.beginPath(); ctx.arc(ss.x,ss.y,(i%3+1)*1.2*twinkle,0,Math.PI*2); ctx.fill();
+    }
+  }
+
+  // --- Earth healing zone ---
+  const es=w2s(EARTH.x,EARTH.y);
+  if(es.x>-200&&es.x<c.width+200&&es.y>-200&&es.y<c.height+200){
+    // Warm glow
+    const g1=ctx.createRadialGradient(es.x,es.y,EARTH.r*0.5,es.x,es.y,EARTH.r*1.3);
+    g1.addColorStop(0,'rgba(100,220,255,0.12)'); g1.addColorStop(0.5,'rgba(50,180,255,0.07)'); g1.addColorStop(1,'rgba(0,100,200,0)');
+    ctx.fillStyle=g1; ctx.beginPath(); ctx.arc(es.x,es.y,EARTH.r*1.3,0,Math.PI*2); ctx.fill();
+    // Pulsing ring
+    const pulse=Math.sin(now/1200)*0.35+0.65;
+    ctx.strokeStyle=`rgba(100,220,255,${pulse*0.5})`; ctx.lineWidth=4;
+    ctx.setLineDash([12,8]); ctx.beginPath(); ctx.arc(es.x,es.y,EARTH.r*pulse,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+    // Little hearts floating up near earth
+    if(nearEarth(player)){ for(let i=0;i<3;i++){ const hx=es.x+Math.sin(now/500+i*2)*30; const hy=es.y-20-(now/20+i*40)%60; ctx.fillStyle=`rgba(255,100,150,${0.4+Math.sin(now/300+i)*0.3})`; ctx.font='16px Arial'; ctx.textAlign='center'; ctx.fillText('💕',hx,hy); } }
+  }
+
+  // --- Planet danger zones (visible warning rings, childlike) ---
+  for(const pl of PLANETS){
+    const ps=w2s(pl.x,pl.y);
+    if(ps.x<-120||ps.x>c.width+120||ps.y<-120||ps.y>c.height+120)continue;
+    const warn=Math.sin(now/600+pl.x)*0.2+0.8;
+    ctx.strokeStyle=`rgba(255,120,60,${0.25*warn})`; ctx.lineWidth=3;
+    ctx.setLineDash([6,10]); ctx.beginPath(); ctx.arc(ps.x,ps.y,pl.r+8,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+    // Small emoji indicator
+    ctx.fillStyle=`rgba(255,255,255,${0.35*warn})`; ctx.font='14px Arial'; ctx.textAlign='center';
+    ctx.fillText('⚠️', ps.x, ps.y-pl.r-14);
+  }
+
+  // --- Energy packs ---
+  for(const pk of packs){
+    const ps=w2s(pk.x,pk.y);
+    const bob=Math.sin(pk.life*0.08+pk.bob)*5;
+    const py=ps.y+bob;
+
+    if(pk.type==='boost'){
+      // Speed boost — golden sparkly
+      const g=ctx.createRadialGradient(ps.x,py,3,ps.x,py,22);
+      g.addColorStop(0,'rgba(255,220,50,0.95)'); g.addColorStop(0.4,'rgba(255,180,20,0.6)'); g.addColorStop(1,'rgba(255,120,0,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ps.x,py,22,0,Math.PI*2); ctx.fill();
+      // Lightning bolt icon
+      ctx.fillStyle='#fff'; ctx.font='bold 18px Arial'; ctx.textAlign='center';
+      ctx.fillText('⚡',ps.x,py+6);
+      // Sparkle particles around
+      for(let i=0;i<3;i++){ const sr=Math.sin(now/200+i*2.1)*8+14; const sa=(now/800+i*2.1)%(Math.PI*2); ctx.fillStyle=`rgba(255,255,200,${0.5+Math.sin(now/150+i)*0.5})`; ctx.beginPath(); ctx.arc(ps.x+Math.cos(sa)*sr,py+Math.sin(sa)*sr,2.5,0,Math.PI*2); ctx.fill(); }
+    } else {
+      // Ammo pack — green bubbly
+      const g=ctx.createRadialGradient(ps.x,py,2,ps.x,py,20);
+      g.addColorStop(0,'rgba(50,255,130,0.95)'); g.addColorStop(0.4,'rgba(20,220,80,0.55)'); g.addColorStop(1,'rgba(0,180,50,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ps.x,py,20,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#88ffbb'; ctx.beginPath(); ctx.arc(ps.x,py,10,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(ps.x-2,py-3,4,0,Math.PI*2); ctx.fill();
+    }
+  }
+
+  // --- Player bullets (blue-white trails) ---
+  for(const b of pBulls){ const ps=w2s(b.x,b.y); if(ps.x<-15||ps.x>c.width+15||ps.y<-15||ps.y>c.height+15)continue;
+    const g=ctx.createRadialGradient(ps.x,ps.y,0,ps.x,ps.y,S.bullet+3);
+    g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(0.3,'rgba(150,200,255,0.8)'); g.addColorStop(1,'rgba(50,100,255,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ps.x,ps.y,S.bullet+3,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(ps.x,ps.y,S.bullet*0.5,0,Math.PI*2); ctx.fill();
+  }
+
+  // --- Enemy bullets (red menacing) ---
+  for(const b of eBulls){ const ps=w2s(b.x,b.y); if(ps.x<-15||ps.x>c.width+15||ps.y<-15||ps.y>c.height+15)continue;
+    const g=ctx.createRadialGradient(ps.x,ps.y,0,ps.x,ps.y,S.bullet+2);
+    g.addColorStop(0,'rgba(255,120,100,1)'); g.addColorStop(0.3,'rgba(255,50,30,0.8)'); g.addColorStop(1,'rgba(200,0,0,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ps.x,ps.y,S.bullet+2,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#ff6666'; ctx.beginPath(); ctx.arc(ps.x,ps.y,S.bullet*0.5,0,Math.PI*2); ctx.fill();
+  }
+
+  // --- Red aliens (with scary-but-cute faces) ---
+  for(const a of reds){
+    const ps=w2s(a.x,a.y);
+    if(ps.x<-100||ps.x>c.width+100||ps.y<-100||ps.y>c.height+100)continue;
+    if(IMG.redAlien){
+      ctx.save(); ctx.translate(ps.x,ps.y); ctx.rotate(ang(a,player)+Math.PI/2);
+      // Subtle glow behind
+      const alGlow=ctx.createRadialGradient(0,0,S.alienW*0.3,0,0,S.alienW*0.7);
+      alGlow.addColorStop(0,'rgba(255,50,20,0.2)'); alGlow.addColorStop(1,'rgba(255,0,0,0)');
+      ctx.fillStyle=alGlow; ctx.beginPath(); ctx.arc(0,0,S.alienW*0.7,0,Math.PI*2); ctx.fill();
+      ctx.drawImage(IMG.redAlien,-S.alienW/2,-S.alienH/2,S.alienW,S.alienH); ctx.restore();
+    } else { ctx.fillStyle='#ff3333'; ctx.beginPath(); ctx.arc(ps.x,ps.y,S.alienW*0.4,0,Math.PI*2); ctx.fill(); }
+    // HP bar
+    const hpP=a.hp/a.maxHp;
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(ps.x-18,ps.y-S.alienH/2-14,36,6);
+    ctx.fillStyle=hpP>0.5?'#5f5':hpP>0.25?'#fa3':'#f33';
+    ctx.fillRect(ps.x-18,ps.y-S.alienH/2-14,36*hpP,6);
+    // Shoot warning glow
+    if(now-a.lastShot>a.cd*0.65){ ctx.fillStyle=`rgba(255,30,0,${0.25+Math.sin(now/60)*0.25})`; ctx.beginPath(); ctx.arc(ps.x,ps.y,S.alienW*0.55+4,0,Math.PI*2); ctx.fill(); }
+  }
+
+  // --- Green aliens (friendly, cute) ---
+  for(const g of greens){
+    const ps=w2s(g.x,g.y);
+    if(ps.x<-100||ps.x>c.width+100||ps.y<-100||ps.y>c.height+100)continue;
+    if(IMG.greenAlien){
+      ctx.save(); ctx.translate(ps.x,ps.y); ctx.rotate(g.wAng+Math.PI/2);
+      // Green glow
+      const grGlow=ctx.createRadialGradient(0,0,S.alienW*0.3,0,0,S.alienW*0.7);
+      grGlow.addColorStop(0,'rgba(50,255,100,0.2)'); grGlow.addColorStop(1,'rgba(0,200,50,0)');
+      ctx.fillStyle=grGlow; ctx.beginPath(); ctx.arc(0,0,S.alienW*0.7,0,Math.PI*2); ctx.fill();
+      ctx.drawImage(IMG.greenAlien,-S.alienW/2,-S.alienH/2,S.alienW,S.alienH); ctx.restore();
+    } else { ctx.fillStyle='#4f4'; ctx.beginPath(); ctx.arc(ps.x,ps.y,S.alienW*0.4,0,Math.PI*2); ctx.fill(); }
+    // Friendly ring + label
+    ctx.strokeStyle='#55ff88'; ctx.lineWidth=2; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.arc(ps.x,ps.y,S.alienW*0.55+6,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#88ffaa'; ctx.font='bold 12px Arial'; ctx.textAlign='center';
+    ctx.fillText('💚 朋友',ps.x,ps.y-S.alienH/2-12);
+  }
+
+  // --- Player (the rocket!) ---
+  if(player){
+    const ps=w2s(player.x,player.y);
+    const show=now>player.inv||Math.floor(now/70)%2===0;
+    if(show){
+      if(IMG.player){
+        ctx.save(); ctx.translate(ps.x,ps.y); ctx.rotate(aimDir()+Math.PI/2);
+        // Engine glow
+        const eg=ctx.createRadialGradient(0,S.player*0.35,5,0,S.player*0.55,25);
+        eg.addColorStop(0,'rgba(255,200,50,0.9)'); eg.addColorStop(0.5,'rgba(255,100,20,0.5)'); eg.addColorStop(1,'rgba(255,50,0,0)');
+        ctx.fillStyle=eg; ctx.beginPath(); ctx.arc(0,S.player*0.4,16,0,Math.PI*2); ctx.fill();
+        ctx.drawImage(IMG.player,-S.player/2,-S.player/2,S.player,S.player); ctx.restore();
+      } else {
+        // Cute fallback rocket
+        ctx.save(); ctx.translate(ps.x,ps.y); ctx.rotate(aimDir()+Math.PI/2);
+        ctx.fillStyle='#5599ff'; ctx.beginPath(); ctx.ellipse(0,0,S.player*0.25,S.player*0.45,0,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#ff7733'; ctx.beginPath(); ctx.arc(0,S.player*0.38,8,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(0,-5,6,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+      }
+    }
+    // Invincibility shield
+    if(now<player.inv){ ctx.strokeStyle=`rgba(200,220,255,${0.3+Math.sin(now/40)*0.3})`; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(ps.x,ps.y,S.player/2+10,0,Math.PI*2); ctx.stroke(); }
+    // Boost trail
+    if(player.speed>CFG.pBaseSpeed){ for(let i=0;i<2;i++){ const bx=ps.x+rnd(-8,8),by=ps.y+rnd(15,25); ctx.fillStyle=`rgba(255,200,50,${0.4+Math.random()*0.4})`; ctx.beginPath(); ctx.arc(bx,by,rnd(2,5),0,Math.PI*2); ctx.fill(); } }
+    // Earth indicator
+    if(nearEarth(player)){ ctx.fillStyle=`rgba(100,220,255,${0.5+Math.sin(now/400)*0.5})`; ctx.font='bold 14px Arial'; ctx.textAlign='center'; ctx.fillText('🛡️ 母星护盾 回血中',ps.x,ps.y-S.player/2-22); }
+    // Low ammo
+    if(player.ammo<=10&&player.ammo>0){ ctx.fillStyle=`rgba(255,200,30,0.85)`; ctx.font='bold 13px Arial'; ctx.textAlign='center'; ctx.fillText('⚠️ 弹药不足！',ps.x,ps.y-S.player/2-22); }
+  }
+
+  // --- Particles ---
+  for(const pt of parts){ const ps=w2s(pt.x,pt.y); ctx.globalAlpha=pt.life; ctx.fillStyle=pt.color; ctx.beginPath(); ctx.arc(ps.x,ps.y,pt.size*pt.life,0,Math.PI*2); ctx.fill(); }
+  ctx.globalAlpha=1;
+
+  // --- Crosshair ---
+  if(mouse.x||mouse.y){ const cs=10; ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(mouse.x-cs,mouse.y);ctx.lineTo(mouse.x-cs/3,mouse.y);ctx.moveTo(mouse.x+cs/3,mouse.y);ctx.lineTo(mouse.x+cs,mouse.y);ctx.moveTo(mouse.x,mouse.y-cs);ctx.lineTo(mouse.x,mouse.y-cs/3);ctx.moveTo(mouse.x,mouse.y+cs/3);ctx.lineTo(mouse.x,mouse.y+cs);ctx.stroke(); }
+}
+
+// --- 🖥️ Resize ---
+function resize(){ c.width=window.innerWidth; c.height=window.innerHeight; updCam(); }
+window.addEventListener('resize',resize);
+
+// --- 🎮 Loop ---
+function loop(ts){
+  if(!lt)lt=ts; let dt=ts-lt; lt=ts; if(dt>120)dt=120;
+  update(dt); render();
+  if(gameState==='playing') updHUD();
+  requestAnimationFrame(loop);
+}
+
+// --- 🚀 Start ---
+async function init(){
+  resize();
+  document.getElementById('ovC').innerHTML='<h1>🚀 辰辰的宇宙历险记</h1><h2>🌟 加载中...</h2>';
+  await Promise.all(Object.entries(ASSETS).map(([k,p])=>loadImg(k,p)));
+  document.getElementById('ovC').innerHTML=`
+    <h1>🚀 辰辰的宇宙历险记</h1><h2>🌟 太空大冒险 🌟</h2>
+    <div class="desc">
+      🌍 母星地球 · 靠近回血+恢复速度<br>
+      👾 红色外星人 · 消灭它们！<br>
+      👽 绿色外星人 · 好朋友！千万别打<br>
+      ⚡ 金色能量 · 捡到短暂加速飞驰<br>
+      🔫 绿色能量 · 补充弹药<br>
+      💫 小心星球！撞到就坠毁啦
+    </div>
+    <button class="btn" onclick="startGame()">🎮 出发！</button>
+    <div class="ctrl-info">💻 <kbd>WASD</kbd>移动 <kbd>鼠标</kbd>瞄准 <kbd>点击</kbd>射击<br>📱 左下方向键 · 右下射击按钮</div>`;
+  lt=performance.now(); requestAnimationFrame(loop);
+}
+init();
+</script>
+</body>
+</html>
