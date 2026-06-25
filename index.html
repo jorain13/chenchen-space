@@ -2,46 +2,33 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,shrink-to-fit=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#000000">
-<title>🚀 辰辰宇宙历险记</title>
-<meta property="og:title" content="🚀 辰辰宇宙历险记">
-<meta property="og:description" content="太空射击大冒险！消灭外星人，保卫宇宙和平！">
-<meta property="og:image" content="https://jorain13.github.io/chenchen-space/主角.png">
-<meta name="wechat:title" content="🚀 辰辰宇宙历险记">
-<meta name="wechat:description" content="太空射击大冒险！消灭外星人，保卫宇宙和平！">
+<title>辰辰宇宙历险记</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100vw;height:100dvh;overflow:hidden;background:#000;touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;position:fixed;top:0;left:0;right:0;bottom:0;margin:0;padding:0}
-canvas{display:block;position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:1}
-#ui{position:fixed;top:0;left:0;right:0;z-index:10;pointer-events:none;padding:6px 10px;display:flex;justify-content:space-between;padding-top:max(6px,env(safe-area-inset-top,0px))}
-#msg{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:22px;font-weight:bold;text-align:center;z-index:20;pointer-events:none;text-shadow:0 0 10px #000;line-height:1.5;width:90%}
-.overlay{position:fixed;top:0;left:0;width:100vw;height:100dvh;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6)}
-.ovbox{background:rgba(8,8,36,0.95);border:2px solid rgba(100,200,255,0.4);border-radius:24px;padding:28px;text-align:center;color:#fff;max-width:340px;width:85%}
-#ui{position:fixed;top:0;left:0;right:0;z-index:10;pointer-events:none;padding:6px 10px;display:flex;justify-content:space-between}
-#ui span{background:rgba(0,0,0,0.65);color:#fff;font-size:12px;font-weight:bold;padding:5px 12px;border-radius:12px}
-#msg{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:22px;font-weight:bold;text-align:center;z-index:20;pointer-events:none;text-shadow:0 0 10px #000;line-height:1.5}
-.overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6)}
-.ovbox{background:rgba(8,8,36,0.95);border:2px solid rgba(100,200,255,0.4);border-radius:24px;padding:32px;text-align:center;color:#fff;max-width:380px;width:90%}
-.ovbox h1{font-size:32px;margin-bottom:8px;color:#fd4;text-shadow:0 0 15px #f80}
-.ovbox h2{font-size:18px;color:#adf;margin-bottom:12px}
-.ovbox .info{font-size:13px;color:#89b;line-height:1.7;margin-bottom:20px}
-.ovbox .btn{display:inline-block;padding:14px 40px;margin:6px;font-size:18px;font-weight:bold;border:none;border-radius:25px;background:linear-gradient(135deg,#f62,#e30);color:#fff;cursor:pointer}
+html,body{width:100%;height:100%;position:fixed;overflow:hidden;background:#000;touch-action:manipulation}
+canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1}
+#ui{position:fixed;top:0;left:0;right:0;z-index:10;pointer-events:none;padding:8px 12px;display:flex;justify-content:space-between;padding-top:max(8px,env(safe-area-inset-top,0))}
+#ui span{background:rgba(0,0,0,0.7);color:#fff;font-size:13px;font-weight:bold;padding:5px 12px;border-radius:12px}
+#ol{position:fixed;top:0;left:0;width:100%;height:100%;z-index:99;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.65)}
+.box{background:rgba(10,10,40,0.95);border:2px solid rgba(100,200,255,0.4);border-radius:24px;padding:30px;text-align:center;color:#fff;max-width:360px;width:90%}
+.box h1{font-size:34px;color:#fd4;margin-bottom:8px}
+.box p{font-size:14px;color:#9ab;line-height:1.7;margin-bottom:22px}
+.btn{display:inline-block;padding:16px 48px;font-size:20px;font-weight:bold;border:none;border-radius:30px;background:linear-gradient(135deg,#f62,#e30);color:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.btn:active{transform:scale(0.94);opacity:0.8}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="ui"><span id="hp">❤️100</span><span id="info">🌌第1关</span><span id="ammo">🔫100</span></div>
-<div id="msg"></div>
-<div class="overlay" id="ol">
-  <div class="ovbox">
+<div id="ol">
+  <div class="box">
     <h1>🚀 辰辰宇宙历险记</h1>
-    <h2>太空射击大冒险</h2>
-    <div class="info">🕹️左下角摇杆控制方向<br>🔫右手按住射击·自动瞄准<br>🌍靠近地球回血<br>💀撞外星人/陨石=结束</div>
-    <button class="btn" id="startBtn">🎮 出发！</button>
+    <p>🕹️左下角摇杆控制方向<br>🔫右手按住射击·自动瞄准<br>🌍靠近地球回血<br>💀撞到外星人/陨石=结束</p>
+    <button class="btn" onclick="startGame()">🎮 出发！</button>
   </div>
 </div>
 
@@ -55,26 +42,26 @@ var cam={x:0,y:0},lt=0,ls=0,stg='title',lv=1,sc=0,mshoot=false;
 var joy={cx:130,cy:300,r:90,on:false,dx:0,dy:0};
 var tm=0,shk=0,nk=0,nc=0;
 
-// Direct init - script is at bottom of body, DOM ready
-cv=document.getElementById('c');ctx=cv.getContext('2d');
-resize();
-document.getElementById('startBtn').onclick=startGame;
-loadImgs();
-function resize(){Wr=window.innerWidth;Hr=window.innerHeight;cv.width=Wr;cv.height=Hr;joy.cy=Hr-140}
-window.addEventListener('resize',resize);
+function dist(a,b){return M.hypot(a.x-b.x,a.y-b.y)}
+function ang(a,b){return M.atan2(b.y-a.y,b.x-a.x)}
+function rnd(a,b){return a+M.random()*(b-a)}
+function edge(){var m=50,s=M.floor(M.random()*4);if(s===0)return{x:rnd(m,W-m),y:-m};if(s===1)return{x:rnd(m,W-m),y:H+m};if(s===2)return{x:-m,y:rnd(m,H-m)};return{x:W+m,y:rnd(m,H-m)}}
+function nearEarth(p){return dist(p,EARTH)<EARTH.r}
+function pt(x,y,c,n){for(var i=0;i<n;i++){var a=M.random()*M.PI*2;pts.push({x:x,y:y,vx:M.cos(a)*rnd(1,5),vy:M.sin(a)*rnd(1,5),l:1,d:rnd(0.02,0.06),c:c,s:rnd(1.5,5)})}}
 
-function loadImgs(){
-  var list={p:'主角.png',m:'大地图.png',r:'红色外星人.png',g:'绿色外星人.png'};
-  var keys=Object.keys(list),n=0;
-  for(var k in list){(function(kk){
-    var img=new Image();imgs[kk]=null;
-    img.onload=function(){imgs[kk]=img;n++;if(n>=keys.length)ready()};
-    img.onerror=function(){n++;if(n>=keys.length)ready()};
-    img.src=list[kk];
-  })(k)}
+function startGame(){
+  document.getElementById('ol').style.display='none';
+  pl={x:W*0.5,y:H*0.55,hp:100,ammo:100,h:-M.PI/2,spd:3.5,inv:performance.now()+5000,boost:0};
+  reds=[];grns=[];jnk=[];cmt=[];bls=[];ebl=[];pks=[];pts=[];
+  ls=0;sc=0;lv=1;stg='play';tm=0;shk=0;
+  initLv(1);
 }
-function ready(){lt=performance.now();loop()}
-
+function updateHUD(){
+  if(!pl)return;
+  document.getElementById('hp').textContent='❤️'+M.max(0,M.round(pl.hp));
+  document.getElementById('ammo').textContent='🔫'+pl.ammo;
+  document.getElementById('info').textContent='🌌第'+lv+'关 👾'+reds.length+' ⭐'+sc;
+}
 function lvCfg(lv){return{mx:3+(lv-1)*2,sp:0.5+lv*0.2,hp:lv<=3?9:lv<=6?12:lv<=10?15:21,cd:M.max(600,1800-lv*100),jc:2+lv}}
 function initLv(lv){
   var i,cfg=lvCfg(lv);
@@ -83,34 +70,10 @@ function initLv(lv){
   grns=[];for(i=0;i<gc;i++)grns.push({p:edge(),wa:rnd(0,M.PI*2),wt:performance.now()+rnd(1000,3500),ea:rnd(0,1)<0.5?20:50,bc:rnd(0,M.PI*2),hp:0,spd:cfg.sp*0.8});
   var jsp=0.1+lv*0.06;
   jnk=[];for(i=0;i<cfg.jc;i++)jnk.push({p:{x:rnd(60,W-60),y:rnd(60,H-60)},r:rnd(10,20),rt:rnd(0,M.PI*2),rs:rnd(-0.02,0.02),df:rnd(0,M.PI*2),ds:rnd(jsp*0.5,jsp)});
-  cmt=[];bls=[];ebl=[];pks=[];pts=[];kl=0;
+  cmt=[];bls=[];ebl=[];pks=[];pts=[];
   nk=performance.now()+rnd(8000,15000);nc=performance.now()+rnd(4000,8000);
   updateHUD();
 }
-
-window.startGame=function(){
-  document.getElementById('ol').style.display='none';
-  pl={x:W*0.5,y:H*0.55,hp:100,ammo:100,h:-M.PI/2,spd:3.5,inv:performance.now()+5000,boost:0};
-  reds=[];grns=[];jnk=[];cmt=[];bls=[];ebl=[];pks=[];pts=[];
-  ls=0;sc=0;lv=1;stg='play';tm=0;shk=0;
-  initLv(1);
-};
-
-function updateHUD(){
-  if(!pl)return;
-  document.getElementById('hp').textContent='❤️'+M.max(0,M.round(pl.hp));
-  document.getElementById('ammo').textContent='🔫'+pl.ammo;
-  document.getElementById('info').textContent='🌌第'+lv+'关 👾'+reds.length+' ⭐'+sc;
-}
-
-// Helpers
-function dist(a,b){return M.hypot(a.x-b.x,a.y-b.y)}
-function ang(a,b){return M.atan2(b.y-a.y,b.x-a.x)}
-function rnd(a,b){return a+M.random()*(b-a)}
-function edge(){var m=50,s=M.floor(M.random()*4);if(s===0)return{x:rnd(m,W-m),y:-m};if(s===1)return{x:rnd(m,W-m),y:H+m};if(s===2)return{x:-m,y:rnd(m,H-m)};return{x:W+m,y:rnd(m,H-m)}}
-function nearEarth(p){return dist(p,EARTH)<EARTH.r}
-function pt(x,y,c,n){for(var i=0;i<n;i++){var a=M.random()*M.PI*2;pts.push({x:x,y:y,vx:M.cos(a)*rnd(1,5),vy:M.sin(a)*rnd(1,5),l:1,d:rnd(0.02,0.06),c:c,s:rnd(1.5,5)})}}
-
 function fire(now,force){
   if(!pl||pl.ammo<=0||now-ls<60||!force)return;
   ls=now;pl.ammo--;
@@ -120,7 +83,6 @@ function fire(now,force){
   bls.push({p:{x:pl.x,y:pl.y},vx:M.cos(fa)*14,vy:M.sin(fa)*14,l:50});
   updateHUD();
 }
-
 function spawnComet(){
   var s=M.floor(M.random()*4),x,y,dir;
   if(s===0){x=rnd(0,W);y=-30;dir=rnd(M.PI*0.3,M.PI*0.7)}
@@ -129,170 +91,123 @@ function spawnComet(){
   else{x=W+30;y=rnd(0,H);dir=rnd(M.PI*0.7,M.PI*1.3)}
   cmt.push({p:{x:x,y:y},vx:M.cos(dir)*rnd(2,4),vy:M.sin(dir)*rnd(2,4),r:rnd(8,14),l:300});
 }
-
 function over(s){
   stg='over';
-  document.getElementById('msg').innerHTML='💥 '+s+'<br><small>第'+lv+'关 得分'+sc+'</small>';
   document.getElementById('ol').style.display='flex';
-  document.getElementById('ol').innerHTML='<div class="ovbox"><h1>💀 挑战失败</h1><h2>'+s+'</h2><p style="color:#adf">第'+lv+'关 · 得分'+sc+'</p><button class="btn" onclick="startGame()">🔄 返回第1关</button></div>';
+  document.getElementById('ol').innerHTML='<div class="box"><h1>💀 挑战失败</h1><p>'+s+'<br>第'+lv+'关 · 得分'+sc+'</p><button class="btn" onclick="startGame()">🔄 重新开始</button></div>';
 }
-
 function win(){
   sc+=lv*200;
-  document.getElementById('msg').innerHTML='🎉 第'+lv+'关通过！';
   setTimeout(function(){
     lv++;pl.hp=M.min(100,pl.hp+30);pl.ammo=M.min(100,pl.ammo+30);pl.inv=performance.now()+5000;pl.spd=3.5;pl.boost=0;
     initLv(lv);stg='play';updateHUD();
-    document.getElementById('msg').innerHTML='🌟 第'+lv+'关！'+reds.length+'个外星人';
   },1500);
 }
 
 function update(dt){
   if(stg!=='play')return;
-  var now=performance.now();
-  tm+=dt;if(shk>0)shk=M.max(0,shk-dt/200);
-
+  var now=performance.now();tm+=dt;if(shk>0)shk=M.max(0,shk-dt/200);
   if(joy.on&&(joy.dx!==0||joy.dy!==0))pl.h=M.atan2(joy.dy,joy.dx);
-
   pl.x+=M.cos(pl.h)*pl.spd*(dt/16);pl.y+=M.sin(pl.h)*pl.spd*(dt/16);
   pl.x=M.max(25,M.min(W-25,pl.x));pl.y=M.max(25,M.min(H-25,pl.y));
-
   if(now>pl.boost){if(pl.spd>3.5)pl.spd=M.max(3.5,pl.spd-0.025*(dt/16));else pl.spd=M.max(1.6,pl.spd-0.008*(dt/16))}
   if(now>pl.boost&&pl.spd>3.5)pl.spd=M.max(3.5,pl.spd-0.03*(dt/16));
-
-  if(nearEarth(pl)){pl.hp=M.min(100,pl.hp+10*(dt/1000));if(now>pl.boost&&pl.spd<3.5)pl.spd=M.min(3.5,pl.spd+0.02*(dt/16));updateHUD()}
-
+  if(nearEarth(pl)){pl.hp=M.min(100,pl.hp+10*(dt/1000));updateHUD()}
   if(mshoot)fire(now,true);
-
-  for(var i=0;i<reds.length;i++){if(dist(pl,reds[i].p)<32){over('撞到红色外星人');return}}
-  for(var i=0;i<grns.length;i++){if(dist(pl,grns[i].p)<32){over('撞到绿色外星人');return}}
-  for(var i=0;i<jnk.length;i++){if(dist(pl,jnk[i].p)<jnk[i].r+14){over('撞到太空垃圾');return}}
-  for(var i=cmt.length-1;i>=0;i--){if(dist(pl,cmt[i].p)<cmt[i].r+16){over('被陨石撞毁');return}}
-
+  for(var i=0;i<reds.length;i++)if(dist(pl,reds[i].p)<32){over('撞到红色外星人');return}
+  for(var i=0;i<grns.length;i++)if(dist(pl,grns[i].p)<32){over('撞到绿色外星人');return}
+  for(var i=0;i<jnk.length;i++)if(dist(pl,jnk[i].p)<jnk[i].r+14){over('撞到太空垃圾');return}
+  for(var i=cmt.length-1;i>=0;i--)if(dist(pl,cmt[i].p)<cmt[i].r+16){over('被陨石撞毁');return}
   for(var i=bls.length-1;i>=0;i--){var b=bls[i];b.p.x+=b.vx*(dt/16);b.p.y+=b.vy*(dt/16);b.l--;if(b.p.x<-60||b.p.x>W+60||b.p.y<-60||b.p.y>H+60||b.l<=0){bls.splice(i,1);continue}
     var hit=false;
     for(var j=reds.length-1;j>=0&&!hit;j--){var a=reds[j];if(dist(b.p,a.p)<38){a.hp-=3;pt(b.p.x,b.p.y,'#f64',8);hit=true;
-      if(a.hp<=0){pt(a.p.x,a.p.y,'#f84',25);reds.splice(j,1);sc+=100;updateHUD();if(reds.length===0){sc+=lv*200;win();return}}}}
-    if(!hit)for(var j=0;j<grns.length;j++){if(dist(b.p,grns[j].p)<38){over('误伤绿色好朋友');return}}
-    if(!hit)for(var j=jnk.length-1;j>=0;j--){if(dist(b.p,jnk[j].p)<jnk[j].r+10){pt(jnk[j].p.x,jnk[j].p.y,'#aac',10);jnk.splice(j,1);hit=true;break}}
+      if(a.hp<=0){pt(a.p.x,a.p.y,'#f84',25);reds.splice(j,1);sc+=100;updateHUD();if(!reds.length){sc+=lv*200;win();return}}}}
+    if(!hit)for(var j=0;j<grns.length;j++)if(dist(b.p,grns[j].p)<38){over('误伤绿色好朋友');return}
+    if(!hit)for(var j=jnk.length-1;j>=0;j--)if(dist(b.p,jnk[j].p)<jnk[j].r+10){pt(jnk[j].p.x,jnk[j].p.y,'#aac',10);jnk.splice(j,1);hit=true;break}
     if(hit)bls.splice(i,1);
   }
-
   for(var i=ebl.length-1;i>=0;i--){var b=ebl[i];b.p.x+=b.vx*(dt/16);b.p.y+=b.vy*(dt/16);b.l--;if(b.p.x<-60||b.p.x>W+60||b.p.y<-60||b.p.y>H+60||b.l<=0){ebl.splice(i,1);continue}
     if(now>pl.inv&&dist(b.p,pl)<30){pl.hp-=2;pl.inv=now+600;pt(pl.x,pl.y,'#f33',10);ebl.splice(i,1);updateHUD();if(pl.hp<=0){over('火箭被击毁');return}}}
-
   for(var i=0;i<reds.length;i++){var a=reds[i],asp=a.spd||1.05;
     if(dist(a.p,EARTH)<EARTH.r+40){var ea=ang(EARTH,a.p);a.p.x+=M.cos(ea)*1.5*(dt/16);a.p.y+=M.sin(ea)*1.5*(dt/16)}
     else{var ag2=ang(a.p,pl);a.p.x+=M.cos(ag2)*asp*(dt/16);a.p.y+=M.sin(ag2)*asp*(dt/16)}
     a.p.x=M.max(35,M.min(W-35,a.p.x));a.p.y=M.max(35,M.min(H-35,a.p.y));a.br+=dt/300;a.ag=M.max(0,a.ag-dt/400);
-    if(now-a.ls>=a.cd){a.ls=now;a.ag=1;ebl.push({p:{x:a.p.x,y:a.p.y},vx:M.cos(ang(a.p,pl))*3.5,vy:M.sin(ang(a.p,pl))*3.5,l:110})}
+    if(now-a.ls>=a.cd){a.ls=now;ebl.push({p:{x:a.p.x,y:a.p.y},vx:M.cos(ang(a.p,pl))*3.5,vy:M.sin(ang(a.p,pl))*3.5,l:110})}
   }
-
   for(var i=0;i<grns.length;i++){var g=grns[i],gsp=g.spd||1.7;
     if(dist(g.p,EARTH)<EARTH.r+40){var ea=ang(EARTH,g.p);g.p.x+=M.cos(ea)*1.5*(dt/16);g.p.y+=M.sin(ea)*1.5*(dt/16)}
     else{if(now>g.wt){g.wa=rnd(0,M.PI*2);g.wt=now+rnd(1000,3500)}g.p.x+=M.cos(g.wa)*gsp*(dt/16);g.p.y+=M.sin(g.wa)*gsp*(dt/16)}
-    g.p.x=M.max(35,M.min(W-35,g.p.x));g.p.y=M.max(35,M.min(H-35,g.p.y));g.bc+=dt/400;g.hp=M.max(0,g.hp-dt/500);
-    if(pl.ammo<40&&dist(g.p,pl)<110&&M.random()<0.004*(dt/16)){g.hp=1;pks.push({p:{x:g.p.x,y:g.p.y},tp:'ammo',l:600,vy:-0.5});var ep=edge();g.p.x=ep.x;g.p.y=ep.y;g.ea=rnd(0,1)<0.5?20:50}
+    g.p.x=M.max(35,M.min(W-35,g.p.x));g.p.y=M.max(35,M.min(H-35,g.p.y));
+    if(pl.ammo<40&&dist(g.p,pl)<110&&M.random()<0.004*(dt/16)){pks.push({p:{x:g.p.x,y:g.p.y},tp:'ammo',l:600,vy:-0.5});var ep=edge();g.p.x=ep.x;g.p.y=ep.y}
   }
-
   if(now>nk){var ts=['boost','ammo','ammo'];pks.push({p:{x:rnd(80,W-80),y:rnd(80,H-80)},tp:ts[M.floor(M.random()*3)],l:650,vy:-0.3});nk=now+rnd(5000,12000)}
   for(var i=pks.length-1;i>=0;i--){var pk=pks[i];pk.p.y+=pk.vy*(dt/16);pk.l--;
     if(dist(pk.p,pl)<28){if(pk.tp==='ammo'){pl.ammo=M.min(100,pl.ammo+(pl.ammo<50?50:20))}else{pl.spd=7;pl.boost=now+3000}pks.splice(i,1);updateHUD();continue}
-    if(pk.l<=0||pk.p.y>H+60)pks.splice(i,1);
-  }
-
+    if(pk.l<=0||pk.p.y>H+60)pks.splice(i,1)}
   for(var i=0;i<jnk.length;i++){var j=jnk[i];j.p.x+=M.cos(j.df)*j.ds*(dt/16);j.p.y+=M.sin(j.df)*j.ds*(dt/16);if(j.p.x<15||j.p.x>W-15)j.df=M.PI-j.df;if(j.p.y<15||j.p.y>H-15)j.df=-j.df;j.p.x=M.max(15,M.min(W-15,j.p.x));j.p.y=M.max(15,M.min(H-15,j.p.y));j.rt+=j.rs*(dt/16)}
-
-  if(lv>=4){if(now>nc){var ctC=M.max(1,M.floor((lv-2)/2));if(cmt.length<ctC+1)spawnComet();nc=now+rnd(3000,6000)}
+  if(lv>=4){if(now>nc){var ct=M.max(1,M.floor((lv-2)/2));if(cmt.length<ct+1)spawnComet();nc=now+rnd(3000,6000)}
     for(var i=cmt.length-1;i>=0;i--){var cm=cmt[i];cm.p.x+=cm.vx*(dt/16);cm.p.y+=cm.vy*(dt/16);cm.l--;if(cm.l<=0||cm.p.x<-100||cm.p.x>W+100||cm.p.y<-100||cm.p.y>H+100)cmt.splice(i,1)}}
-
-  for(var i=pts.length-1;i>=0;i--){var p2=pts[i];p2.x+=p2.vx*(dt/16);p2.y+=p2.vy*(dt/16);p2.l-=p2.d*(dt/16);if(p2.l<=0)pts.splice(i,1)}
-
-  cam.x=pl.x-Wr/2;cam.y=pl.y-Hr/2;
-  cam.x=M.max(0,M.min(W-Wr,cam.x));cam.y=M.max(0,M.min(H-Hr,cam.y));
-
-  var tg=M.max(1,M.floor(lv/3));
-  if(grns.length<tg&&M.random()<0.004*(dt/16))grns.push({p:edge(),wa:rnd(0,M.PI*2),wt:performance.now()+rnd(1000,3500),ea:rnd(0,1)<0.5?20:50,bc:rnd(0,M.PI*2),hp:0,spd:lvCfg(lv).sp*0.8});
-
+  for(var i=pts.length-1;i>=0;i--){var p=pts[i];p.x+=p.vx*(dt/16);p.y+=p.vy*(dt/16);p.l-=p.d*(dt/16);if(p.l<=0)pts.splice(i,1)}
+  cam.x=pl.x-Wr/2;cam.y=pl.y-Hr/2;cam.x=M.max(0,M.min(W-Wr,cam.x));cam.y=M.max(0,M.min(H-Hr,cam.y));
+  var tg=M.max(1,M.floor(lv/3));if(grns.length<tg&&M.random()<0.004*(dt/16))grns.push({p:edge(),wa:rnd(0,M.PI*2),wt:performance.now()+rnd(1000,3500),ea:rnd(0,1)<0.5?20:50,bc:rnd(0,M.PI*2),hp:0,spd:lvCfg(lv).sp*0.8});
   pl.hp=M.max(0,M.min(100,pl.hp));pl.ammo=M.max(0,M.min(100,pl.ammo));pl.spd=M.max(1.6,M.min(7,pl.spd));
 }
 
 function render(){
-  ctx.clearRect(0,0,Wr,Hr);
-  var now=performance.now(),t=tm;
+  ctx.clearRect(0,0,Wr,Hr);var now=performance.now(),t=tm;
   var sx=0,sy=0;if(shk>0){sx=(M.random()-0.5)*shk*12;sy=(M.random()-0.5)*shk*12}
   var w2s=function(wx,wy){return{x:wx-cam.x+sx,y:wy-cam.y+sy}};
-
-  // Map
   if(imgs.m)ctx.drawImage(imgs.m,-cam.x,-cam.y,W,H);
   else{ctx.fillStyle='#0a0030';ctx.fillRect(0,0,Wr,Hr)}
-
-  // Earth
-  var es=w2s(EARTH.x,EARTH.y);
-  var g=ctx.createRadialGradient(es.x,es.y,EARTH.r*0.3,es.x,es.y,EARTH.r*1.5);g.addColorStop(0,'rgba(100,220,255,0.15)');g.addColorStop(1,'rgba(0,100,200,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(es.x,es.y,EARTH.r*1.5,0,M.PI*2);ctx.fill();
-
-  // Planets
+  var es=w2s(EARTH.x,EARTH.y);var g=ctx.createRadialGradient(es.x,es.y,EARTH.r*0.3,es.x,es.y,EARTH.r*1.5);g.addColorStop(0,'rgba(100,220,255,0.15)');g.addColorStop(1,'rgba(0,100,200,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(es.x,es.y,EARTH.r*1.5,0,M.PI*2);ctx.fill();
   for(var i=0;i<PLANETS.length;i++){var ps=w2s(PLANETS[i].x,PLANETS[i].y);ctx.strokeStyle='rgba(255,120,60,0.3)';ctx.lineWidth=2;ctx.setLineDash([6,10]);ctx.beginPath();ctx.arc(ps.x,ps.y,PLANETS[i].r,0,M.PI*2);ctx.stroke();ctx.setLineDash([])}
-
-  // Junk
   for(var i=0;i<jnk.length;i++){var jk=jnk[i],js=w2s(jk.p.x,jk.p.y);ctx.save();ctx.translate(js.x,js.y);ctx.rotate(jk.rt);ctx.fillStyle='#111';ctx.strokeStyle='#333';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-jk.r,0);ctx.lineTo(-jk.r*0.3,-jk.r*0.6);ctx.lineTo(jk.r*0.5,-jk.r*0.3);ctx.lineTo(jk.r,jk.r*0.2);ctx.lineTo(jk.r*0.4,jk.r*0.5);ctx.lineTo(-jk.r*0.5,jk.r*0.7);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore()}
-
-  // Comets
-  for(var i=0;i<cmt.length;i++){var cm2=cmt[i],cs=w2s(cm2.p.x,cm2.p.y);var ca=M.atan2(cm2.vy,cm2.vx);ctx.save();ctx.translate(cs.x,cs.y);ctx.rotate(ca);var tl=ctx.createLinearGradient(-30,0,-cm2.r,0);tl.addColorStop(0,'rgba(255,200,100,0)');tl.addColorStop(0.5,'rgba(255,150,50,0.6)');tl.addColorStop(1,'rgba(255,200,80,1)');ctx.fillStyle=tl;ctx.beginPath();ctx.moveTo(-cm2.r,0);ctx.lineTo(-35,-cm2.r*0.4);ctx.lineTo(-35,cm2.r*0.4);ctx.closePath();ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,0,cm2.r*0.6,0,M.PI*2);ctx.fill();ctx.restore()}
-
-  // Pickups
+  for(var i=0;i<cmt.length;i++){var cm=cmt[i],cs=w2s(cm.p.x,cm.p.y);var ca=M.atan2(cm.vy,cm.vx);ctx.save();ctx.translate(cs.x,cs.y);ctx.rotate(ca);var tl=ctx.createLinearGradient(-30,0,-cm.r,0);tl.addColorStop(0,'rgba(255,200,100,0)');tl.addColorStop(0.5,'rgba(255,150,50,0.6)');tl.addColorStop(1,'rgba(255,200,80,1)');ctx.fillStyle=tl;ctx.beginPath();ctx.moveTo(-cm.r,0);ctx.lineTo(-35,-cm.r*0.4);ctx.lineTo(-35,cm.r*0.4);ctx.closePath();ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,0,cm.r*0.6,0,M.PI*2);ctx.fill();ctx.restore()}
   for(var i=0;i<pks.length;i++){var pk=pks[i],ps=w2s(pk.p.x,pk.p.y),bob=M.sin(pk.l*0.1)*6,py=ps.y+bob;
     if(pk.tp==='boost'){ctx.fillStyle='#fd0';ctx.beginPath();ctx.arc(ps.x,py,14,0,M.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 16px sans-serif';ctx.textAlign='center';ctx.fillText('⚡',ps.x,py+5)}
     else{ctx.fillStyle='#4f8';ctx.beginPath();ctx.arc(ps.x,py,12,0,M.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.fillText('🔫',ps.x,py+4)}
   }
-
-  // Bullets
   for(var i=0;i<bls.length;i++){var bs=w2s(bls[i].p.x,bls[i].p.y);ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bs.x,bs.y,5,0,M.PI*2);ctx.fill()}
   for(var i=0;i<ebl.length;i++){var bs=w2s(ebl[i].p.x,ebl[i].p.y);ctx.fillStyle='#f44';ctx.beginPath();ctx.arc(bs.x,bs.y,4,0,M.PI*2);ctx.fill()}
-
-  // Red aliens
-  for(var i=0;i<reds.length;i++){var a=reds[i],as=w2s(a.p.x,a.p.y);
-    if(imgs.r){ctx.save();ctx.translate(as.x,as.y);ctx.rotate(ang(a.p,pl)+M.PI/2);ctx.drawImage(imgs.r,-30,-17,60,34);ctx.restore()}
-    else{ctx.fillStyle='#f33';ctx.beginPath();ctx.arc(as.x,as.y,18,0,M.PI*2);ctx.fill()}
-    var hpP=a.hp/a.mhp;ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(as.x-14,as.y-26,28,4);ctx.fillStyle=hpP>0.5?'#5f5':hpP>0.25?'#fa3':'#f33';ctx.fillRect(as.x-14,as.y-26,28*hpP,4);
+  for(var i=0;i<reds.length;i++){var a=reds[i],as2=w2s(a.p.x,a.p.y);
+    if(imgs.r){ctx.save();ctx.translate(as2.x,as2.y);ctx.rotate(ang(a.p,pl)+M.PI/2);ctx.drawImage(imgs.r,-30,-17,60,34);ctx.restore()}
+    else{ctx.fillStyle='#f33';ctx.beginPath();ctx.arc(as2.x,as2.y,18,0,M.PI*2);ctx.fill()}
+    ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(as2.x-14,as2.y-26,28,4);ctx.fillStyle=a.hp/a.mhp>0.5?'#5f5':a.hp/a.mhp>0.25?'#fa3':'#f33';ctx.fillRect(as2.x-14,as2.y-26,28*(a.hp/a.mhp),4);
   }
-
-  // Green aliens
   for(var i=0;i<grns.length;i++){var g2=grns[i],gs=w2s(g2.p.x,g2.p.y);
     if(imgs.g){ctx.save();ctx.translate(gs.x,gs.y);ctx.rotate(g2.wa+M.PI/2);ctx.drawImage(imgs.g,-30,-17,60,34);ctx.restore()}
     else{ctx.fillStyle='#4f4';ctx.beginPath();ctx.arc(gs.x,gs.y,18,0,M.PI*2);ctx.fill()}
     ctx.strokeStyle='rgba(80,255,130,0.4)';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(gs.x,gs.y,26,0,M.PI*2);ctx.stroke();ctx.setLineDash([]);
   }
-
-  // Player
-  if(pl){var ps=w2s(pl.x,pl.y),show=now>pl.inv||M.floor(now/70)%2===0;
-    if(show&&imgs.p){ctx.save();ctx.translate(ps.x,ps.y);ctx.rotate(pl.h+M.PI/2);
+  if(pl){var ps2=w2s(pl.x,pl.y),show=now>pl.inv||M.floor(now/70)%2===0;
+    if(show&&imgs.p){ctx.save();ctx.translate(ps2.x,ps2.y);ctx.rotate(pl.h+M.PI/2);
       var fl=M.abs(M.sin(t/60))*0.3+0.7;ctx.fillStyle='#ff8800';ctx.beginPath();ctx.moveTo(-6,22);ctx.lineTo(0,22+20*fl);ctx.lineTo(6,22);ctx.closePath();ctx.fill();
       ctx.drawImage(imgs.p,-30,-30,60,60);ctx.restore()}
-    if(now<pl.inv){ctx.strokeStyle='rgba(180,220,255,'+(0.3+M.sin(now/35)*0.3)+')';ctx.lineWidth=4;ctx.beginPath();ctx.arc(ps.x,ps.y,32,0,M.PI*2);ctx.stroke()}
-    ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(ps.x-18,ps.y-36,36,5);
-    ctx.fillStyle=pl.hp>50?'#4f4':pl.hp>25?'#fa3':'#f33';ctx.fillRect(ps.x-18,ps.y-36,36*(pl.hp/100),5);
-    if(nearEarth(pl)){ctx.fillStyle='rgba(100,220,255,0.8)';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText('🛡️回血中',ps.x,ps.y-42)}
+    if(now<pl.inv){ctx.strokeStyle='rgba(180,220,255,'+(0.3+M.sin(now/35)*0.3)+')';ctx.lineWidth=4;ctx.beginPath();ctx.arc(ps2.x,ps2.y,32,0,M.PI*2);ctx.stroke()}
+    ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(ps2.x-18,ps2.y-36,36,5);ctx.fillStyle=pl.hp>50?'#4f4':pl.hp>25?'#fa3':'#f33';ctx.fillRect(ps2.x-18,ps2.y-36,36*(pl.hp/100),5);
   }
-
-  // Particles
-  for(var i=0;i<pts.length;i++){var p=pts[i],ps2=w2s(p.x,p.y);ctx.globalAlpha=p.l;ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(ps2.x,ps2.y,p.s*p.l,0,M.PI*2);ctx.fill()}ctx.globalAlpha=1;
-
-  // Joystick
+  for(var i=0;i<pts.length;i++){var p2=pts[i],ps3=w2s(p2.x,p2.y);ctx.globalAlpha=p2.l;ctx.fillStyle=p2.c;ctx.beginPath();ctx.arc(ps3.x,ps3.y,p2.s*p2.l,0,M.PI*2);ctx.fill()}ctx.globalAlpha=1;
   ctx.strokeStyle='rgba(255,255,255,0.25)';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(joy.cx,joy.cy,joy.r,0,M.PI*2);ctx.stroke();ctx.setLineDash([]);
-  if(joy.on&&(joy.dx!==0||joy.dy!==0)){var ja=M.atan2(joy.dy,joy.dx),jl=M.min(joy.r,M.hypot(joy.dx,joy.dy)*0.8);ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=3;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(joy.cx,joy.cy);ctx.lineTo(joy.cx+M.cos(ja)*jl,joy.cy+M.sin(ja)*jl);ctx.stroke();ctx.fillStyle='rgba(255,255,255,0.5)';ctx.beginPath();ctx.arc(joy.cx+joy.dx*0.6,joy.cy+joy.dy*0.6,14,0,M.PI*2);ctx.fill()}
+  if(joy.on&&(joy.dx||joy.dy)){var ja=M.atan2(joy.dy,joy.dx),jl=M.min(joy.r,M.hypot(joy.dx,joy.dy)*0.8);ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=3;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(joy.cx,joy.cy);ctx.lineTo(joy.cx+M.cos(ja)*jl,joy.cy+M.sin(ja)*jl);ctx.stroke();ctx.fillStyle='rgba(255,255,255,0.5)';ctx.beginPath();ctx.arc(joy.cx+joy.dx*0.6,joy.cy+joy.dy*0.6,14,0,M.PI*2);ctx.fill()}
 }
+function loop(ts){if(!lt)lt=ts;var dt=ts-lt;lt=ts;if(dt>120)dt=120;update(dt);render();requestAnimationFrame(loop)}
 
-function loop(ts){
-  if(!lt)lt=ts;var dt=ts-lt;lt=ts;if(dt>120)dt=120;
-  update(dt);render();
-  requestAnimationFrame(loop);
-}
+// Init
+cv=document.getElementById('c');ctx=cv.getContext('2d');
+function resize(){Wr=window.innerWidth;Hr=window.innerHeight;cv.width=Wr;cv.height=Hr;joy.cy=Hr-140}
+resize();window.addEventListener('resize',resize);
 
-// Fullscreen on first touch
-document.addEventListener('touchstart',function fs(){try{document.body.webkitRequestFullscreen&&document.body.webkitRequestFullscreen()}catch(e){}document.removeEventListener('touchstart',fs)},{once:true});
+// Load images
+var list={p:'主角.png',m:'大地图.png',r:'红色外星人.png',g:'绿色外星人.png'};
+var keys=Object.keys(list),n=0;
+for(var k in list){(function(kk){
+  var img=new Image();imgs[kk]=null;
+  img.onload=function(){imgs[kk]=img;n++;if(n>=keys.length){lt=performance.now();loop()}};
+  img.onerror=function(){n++;if(n>=keys.length){lt=performance.now();loop()}};
+  img.src=list[kk];
+})(k)}
 
-// Touch events
+// Touch: joystick + shoot
 cv.addEventListener('touchstart',function(e){e.preventDefault();
   if(stg!=='play')return;
   for(var i=0;i<e.touches.length;i++){var t=e.touches[i];
@@ -308,19 +223,15 @@ cv.addEventListener('touchmove',function(e){e.preventDefault();
   }
   if(!hasL)joy.on=false;mshoot=hasR;
 },{passive:false});
-cv.addEventListener('touchend',function(e){var hasL=false,hasR=false;
+cv.addEventListener('touchend',function(e){
+  var hasL=false,hasR=false;
   for(var i=0;i<e.touches.length;i++){if(e.touches[i].clientX<Wr*0.4&&e.touches[i].clientY>Hr*0.5)hasL=true;else hasR=true}
   if(!hasL)joy.on=false;mshoot=hasR;
 });
-
-// Mouse for desktop
-cv.addEventListener('mousemove',function(e){
-  if(stg!=='play')return;
-  if(e.clientX<Wr*0.4&&e.clientY>Hr*0.5){var dx=e.clientX-joy.cx,dy=e.clientY-joy.cy;if(M.hypot(dx,dy)<joy.r*1.5){joy.on=true;joy.dx=dx;joy.dy=dy}}
-});
+// Mouse desktop
+cv.addEventListener('mousemove',function(e){if(stg==='play'&&e.clientX<Wr*0.4&&e.clientY>Hr*0.5){var dx=e.clientX-joy.cx,dy=e.clientY-joy.cy;if(M.hypot(dx,dy)<joy.r*1.5){joy.on=true;joy.dx=dx;joy.dy=dy}}});
 cv.addEventListener('mousedown',function(e){if(stg==='play'&&e.clientX>=Wr*0.4)mshoot=true});
 cv.addEventListener('mouseup',function(){mshoot=false;joy.on=false});
-
 </script>
 </body>
 </html>
