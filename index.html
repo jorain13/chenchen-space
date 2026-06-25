@@ -2,7 +2,11 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
 <title>🚀 辰辰宇宙历险记</title>
 <meta property="og:title" content="🚀 辰辰宇宙历险记">
 <meta property="og:description" content="太空射击大冒险！消灭外星人，保卫宇宙和平！">
@@ -11,8 +15,8 @@
 <meta name="wechat:description" content="太空射击大冒险！消灭外星人，保卫宇宙和平！">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-canvas{display:block;position:fixed;top:0;left:0}
+html,body{width:100vw;height:100vh;height:-webkit-fill-available;overflow:hidden;background:#000;touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;position:fixed;top:0;left:0;right:0;bottom:0;margin:0;padding:0}
+canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%;z-index:1}
 #ui{position:fixed;top:0;left:0;right:0;z-index:10;pointer-events:none;padding:6px 10px;display:flex;justify-content:space-between}
 #ui span{background:rgba(0,0,0,0.65);color:#fff;font-size:12px;font-weight:bold;padding:5px 12px;border-radius:12px}
 #msg{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:22px;font-weight:bold;text-align:center;z-index:20;pointer-events:none;text-shadow:0 0 10px #000;line-height:1.5}
