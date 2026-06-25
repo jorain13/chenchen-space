@@ -47,14 +47,11 @@ var cam={x:0,y:0},lt=0,ls=0,stg='title',lv=1,sc=0,mshoot=false;
 var joy={cx:130,cy:300,r:90,on:false,dx:0,dy:0};
 var tm=0,shk=0,nk=0,nc=0;
 
-document.addEventListener('DOMContentLoaded',function(){
-  cv=document.getElementById('c');ctx=cv.getContext('2d');
-  resize();
-  document.getElementById('startBtn').addEventListener('click',function(){
-    startGame();
-  });
-  loadImgs();
-});
+// Direct init - script is at bottom of body, DOM ready
+cv=document.getElementById('c');ctx=cv.getContext('2d');
+resize();
+document.getElementById('startBtn').onclick=startGame;
+loadImgs();
 function resize(){Wr=window.innerWidth;Hr=window.innerHeight;cv.width=Wr;cv.height=Hr;joy.cy=Hr-140}
 window.addEventListener('resize',resize);
 
@@ -83,13 +80,13 @@ function initLv(lv){
   updateHUD();
 }
 
-function startGame(){
+window.startGame=function(){
   document.getElementById('ol').style.display='none';
   pl={x:W*0.5,y:H*0.55,hp:100,ammo:100,h:-M.PI/2,spd:3.5,inv:performance.now()+5000,boost:0};
   reds=[];grns=[];jnk=[];cmt=[];bls=[];ebl=[];pks=[];pts=[];
   ls=0;sc=0;lv=1;stg='play';tm=0;shk=0;
   initLv(1);
-}
+};
 
 function updateHUD(){
   if(!pl)return;
