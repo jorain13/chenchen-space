@@ -33,7 +33,7 @@ canvas{display:block;position:fixed;top:0;left:0}
     <h1>🚀 辰辰宇宙历险记</h1>
     <h2>太空射击大冒险</h2>
     <div class="info">🕹️左下角摇杆控制方向<br>🔫右手按住射击·自动瞄准<br>🌍靠近地球回血<br>💀撞外星人/陨石=结束</div>
-    <button class="btn" id="startBtn" onclick="startGame()">🎮 出发！</button>
+    <button class="btn" id="startBtn">🎮 出发！</button>
   </div>
 </div>
 
@@ -47,12 +47,14 @@ var cam={x:0,y:0},lt=0,ls=0,stg='title',lv=1,sc=0,mshoot=false;
 var joy={cx:130,cy:300,r:90,on:false,dx:0,dy:0};
 var tm=0,shk=0,nk=0,nc=0;
 
-function init(){
+document.addEventListener('DOMContentLoaded',function(){
   cv=document.getElementById('c');ctx=cv.getContext('2d');
   resize();
-  document.getElementById('startBtn').onclick=startGame;
+  document.getElementById('startBtn').addEventListener('click',function(){
+    startGame();
+  });
   loadImgs();
-}
+});
 function resize(){Wr=window.innerWidth;Hr=window.innerHeight;cv.width=Wr;cv.height=Hr;joy.cy=Hr-140}
 window.addEventListener('resize',resize);
 
@@ -311,7 +313,6 @@ cv.addEventListener('mousemove',function(e){
 cv.addEventListener('mousedown',function(e){if(stg==='play'&&e.clientX>=Wr*0.4)mshoot=true});
 cv.addEventListener('mouseup',function(){mshoot=false;joy.on=false});
 
-init();
 </script>
 </body>
 </html>
