@@ -1035,8 +1035,10 @@ function render() {
           pssY = (fwy - 15) + (prY - (fwy - 15)) * walkProgress;
         }
         ctx.save(); ctx.translate(pssX, pssY);
-        ctx.globalAlpha = 1;
-        if (images.princess) ctx.drawImage(images.princess, -20, -50, 40, 55);
+        if (images.princess) {
+          ctx.globalCompositeOperation = 'multiply';
+          ctx.drawImage(images.princess, -20, -50, 40, 55);
+        }
         ctx.restore();
       }
     }
