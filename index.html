@@ -70,19 +70,12 @@ var CFG = {
   RED_COUNT_SCALE: 2,         // +2 per level
   RED_AGGRO_RANGE: 180,       // 进入此范围后转为追击模式
 
-  // ── 绿色外星人（修改规则在这里！）──
-  GREEN_BULLET_IMMUNE: true,   // 子弹是否穿过（true=穿过无伤害）
-  GREEN_COLLISION_GAMEOVER: true, // 撞击是否游戏结束
-
   // ── 宇宙垃圾 ──
   JUNK_BASE_COUNT: 3,         // level 1 count
   JUNK_COUNT_SCALE: 1,        // +1 per level
 
   // ── 地球回血 ──
-  HEAL_RATE: 10,              // HP per second
-
-  // ── 能量包 ──
-  PACK_INTERVAL: 8000,        // base ms between random drops
+  HEAL_RATE: 10               // HP per second
 };
 
 // ============================================================
@@ -1074,10 +1067,11 @@ function render() {
 // ============================================================
 
 function gameLoop(ts) {
-  if (!lastFrame) lastFrame = ts;
-  var dt = ts - lastFrame;
-  lastFrame = ts;
+  if (!lastFrame) lastFrame = ts || 0;
+  var dt = ts ? ts - lastFrame : 0;
+  lastFrame = ts || lastFrame;
   if (dt > 120) dt = 120;
+  if (dt < 0) dt = 0;
 
   update(dt);
   render();
