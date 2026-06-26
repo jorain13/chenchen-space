@@ -1023,12 +1023,20 @@ function render() {
       ctx.drawImage(images.prince, -22, -55, 44, 55);
       ctx.restore();
       // 公主：首次王子到位后1.5x速赶来，之后一起出发
-      // 公主debug - 画在屏幕中央
-      if (images.princess) {
-        ctx.drawImage(images.princess, screenW/2 - 30, screenH/2 - 60, 60, 70);
-      } else {
-        ctx.fillStyle = '#f0f';
-        ctx.fillRect(screenW/2 - 20, screenH/2 - 20, 40, 40);
+      // 公主走在王子右侧
+      if (plantedFlowers.length >= 0 && images.princess) { // TODO: 改回98
+        var pssX, pssY;
+        if (plantedFlowers.length === 0) {
+          var pssProgress = M.min(1, M.max(0, walkProgress - 0.7) / 0.3 * 1.5);
+          pssX = (fwx + 85) + (prX + 20 - (fwx + 85)) * pssProgress;
+          pssY = (fwy - 15) + (prY - (fwy - 15)) * pssProgress;
+        } else {
+          pssX = (fwx + 85) + (prX + 20 - (fwx + 85)) * walkProgress;
+          pssY = (fwy - 15) + (prY - (fwy - 15)) * walkProgress;
+        }
+        ctx.save(); ctx.translate(pssX, pssY);
+        ctx.drawImage(images.princess, -20, -50, 40, 55);
+        ctx.restore();
       }
     }
   }
