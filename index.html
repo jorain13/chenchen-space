@@ -1020,7 +1020,7 @@ function render() {
       ctx.drawImage(images.prince, -22, -55, 44, 55);
       ctx.restore();
       // 第99朵花起公主出现，第100朵起一起出现
-      if (plantedFlowers.length >= 98 && images.princess) {
+      if (plantedFlowers.length >= 0 && images.princess) { // TODO: 改回98
         var pssX = prX - 30;
         var pssY = prY;
         ctx.save(); ctx.translate(pssX, pssY);
