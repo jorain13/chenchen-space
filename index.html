@@ -767,16 +767,22 @@ function render() {
     ctx.setLineDash([]);
   }
 
-  // ── 永久种植的小花（右下角黄色大星球表面，从左到右排列）──
+  // ── 永久种植的小花（右下角黄色大星球表面，沿弧线排列）──
   var flowerPlanet = PLANETS[3];
   var fp = w2s(flowerPlanet.x, flowerPlanet.y);
-  var surfaceY = fp.y - flowerPlanet.r; // 星球顶部表面精确位置
+  var pr = flowerPlanet.r;
+  // 小花角度：第一朵-22°，之后每朵+14°
+  var flowerStartAngle = -22 * M.PI / 180;
+  var flowerAngleStep  =  14 * M.PI / 180;
 
   if (images.flower) {
     for (var fi = 0; fi < plantedFlowers.length; fi++) {
-      var fx = fp.x - flowerPlanet.r + 12 + fi * 16;
+      var fa = flowerStartAngle + fi * flowerAngleStep;
+      var ffx = fp.x + M.sin(fa) * pr;
+      var ffy = fp.y - M.cos(fa) * pr;
       ctx.save();
-      ctx.translate(fx, surfaceY + 2);
+      ctx.translate(ffx, ffy);
+      ctx.rotate(fa); // 花朵沿径向站立
       ctx.drawImage(images.flower, -10, -14, 20, 22);
       ctx.restore();
     }
@@ -785,47 +791,46 @@ function render() {
   // ── 小王子场景 ──
   if (state === 'prince') {
     var elapsed = Date.now() - princeTimer;
-    var pr = flowerPlanet.r;
 
-    // 王子沿星球弧线走动：角度从右侧(40°)走到左侧(-15°)
-    var startAngle =  40 * M.PI / 180;
-    var endAngle   = -15 * M.PI / 180;
+    // 王子从星球右侧(50°)沿弧线走到左侧(-22°)
+    var startAngle =  50 * M.PI / 180;
+    var endAngle   = -22 * M.PI / 180;
     var walkProgress = princePhase === 0 ? M.min(1, elapsed / 1000) : 1;
-    // ease-out
-    walkProgress = 1 - M.pow(1 - walkProgress, 2);
+    walkProgress = 1 - M.pow(1 - walkProgress, 2); // ease-out
     var curAngle = startAngle + (endAngle - startAngle) * walkProgress;
 
-    // 弧线上位置：星球中心 + 半径偏移
+    // 弧线上位置
     var princeX = fp.x + M.sin(curAngle) * pr;
     var princeY = fp.y - M.cos(curAngle) * pr;
 
-    // 新花朵位置（星球表面偏左）
-    var newFlowerX = fp.x - pr + 12 + plantedFlowers.length * 16;
+    // 新花朵：下一朵的位置（在弧线上）
+    var newFa = flowerStartAngle + plantedFlowers.length * flowerAngleStep;
+    var newFx = fp.x + M.sin(newFa) * pr;
+    var newFy = fp.y - M.cos(newFa) * pr;
 
     if (princePhase >= 1 && images.flower) {
-      // 阶段1和2：新花朵出现并保留
+      // 阶段1和2：新花朵沿弧线出现
       var flowerAlpha = princePhase === 2 ? 1 : M.min(1, (elapsed - 1000) / 600);
       ctx.globalAlpha = flowerAlpha;
       ctx.save();
-      ctx.translate(newFlowerX, surfaceY + 2);
+      ctx.translate(newFx, newFy);
+      ctx.rotate(newFa);
       ctx.drawImage(images.flower, -10, -14, 20, 22);
       ctx.restore();
       ctx.globalAlpha = 1;
     }
 
     if (princePhase <= 1 && images.prince) {
-      // 阶段0和1：小王子可见；阶段1末尾渐隐
+      // 阶段0和1：小王子沿弧线走动
       var princeAlpha = princePhase === 0 ? 1 : M.max(0, 1 - (elapsed - 2200) / 300);
       ctx.globalAlpha = princeAlpha;
       ctx.save();
       ctx.translate(princeX, princeY);
-      // 身体沿径向站立（脚朝星球中心，头朝外）
       ctx.rotate(curAngle);
       ctx.drawImage(images.prince, -22, -55, 44, 55);
       ctx.restore();
       ctx.globalAlpha = 1;
     }
-
   }
 
   // ── 宇宙垃圾 ──
