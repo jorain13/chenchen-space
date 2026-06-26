@@ -1023,9 +1023,14 @@ function render() {
       ctx.drawImage(images.prince, -22, -55, 44, 55);
       ctx.restore();
       // 公主：首次王子到位后1.5x速赶来，之后一起出发
-      // 公主
+      // 公主 - 屏幕中央debug
+      ctx.fillStyle = '#f0f';
+      ctx.fillRect(screenW/2 - 20, screenH/2 - 20, 40, 40);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('公主', screenW/2, screenH/2 - 30);
+
       ctx.save(); ctx.translate(prX + 22, prY);
-      ctx.fillStyle = '#f0f'; ctx.fillRect(-15, -40, 30, 40);
       if (images.princess) ctx.drawImage(images.princess, -25, -55, 50, 60);
       ctx.restore();
     }
