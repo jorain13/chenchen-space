@@ -397,9 +397,9 @@ function updateArm(dt) {
       armLength = CFG.ARM_MAX_LEN;
       armState = 'retracting';
     }
-    // 检测碰到能量石（从火箭头部算起）
-    var tipX = player.x + M.cos(armAngle) * (armLength + 20);
-    var tipY = player.y + M.sin(armAngle) * (armLength + 20);
+    // 检测碰到能量石
+    var tipX = player.x + M.cos(armAngle) * armLength;
+    var tipY = player.y + M.sin(armAngle) * armLength;
     for (var i = energyStones.length - 1; i >= 0; i--) {
       if (dist({ x: tipX, y: tipY }, energyStones[i].pos) < 26) {
         armGrabbed = energyStones[i];
@@ -1188,18 +1188,16 @@ function render() {
   // ── 机械臂 ──
   if (armState !== 'idle' && player) {
     var ps2 = w2s(player.x, player.y);
-    // 从火箭头部（nose）出发
-    var noseX = ps2.x + M.cos(armAngle) * 20;
-    var noseY = ps2.y + M.sin(armAngle) * 20;
-    var tipX = noseX + M.cos(armAngle) * armLength;
-    var tipY = noseY + M.sin(armAngle) * armLength;
+    // 从火箭中心沿轴线伸出
+    var tipX = ps2.x + M.cos(armAngle) * armLength;
+    var tipY = ps2.y + M.sin(armAngle) * armLength;
 
     // 绳索 — 黑色粗线
     ctx.strokeStyle = '#222';
     ctx.lineWidth = 4;
     ctx.setLineDash([]);
     ctx.beginPath();
-    ctx.moveTo(noseX, noseY);
+    ctx.moveTo(ps2.x, ps2.y);
     ctx.lineTo(tipX, tipY);
     ctx.stroke();
 
