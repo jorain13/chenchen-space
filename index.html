@@ -33,221 +33,1045 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1}
 </div>
 
 <script>
-// === GAME ENGINE ===
-var W=800,H=449;
-var EARTH={x:W*0.5,y:H*0.63,r:40};
-var PLANETS=[{x:W*0.16,y:H*0.26,r:24},{x:W*0.84,y:H*0.37,r:28},{x:W*0.32,y:H*0.72,r:20},{x:W*0.76,y:H*0.78,r:22},{x:W*0.5,y:H*0.18,r:18},{x:W*0.62,y:H*0.55,r:17}];
-var M=Math;
-var cv,ctx,Wr,Hr,imgs={},pl,reds=[],grns=[],jnk=[],cmt=[],bls=[],ebl=[],pks=[],pts=[];
-var cam={x:0,y:0},lt=0,ls=0,stg='title',lv=1,sc=0,mshoot=false;
-var joy={cx:130,cy:300,r:90,on:false,dx:0,dy:0};
-var tm=0,shk=0,nk=0,nc=0;
+// ============================================================
+//  🎮 辰辰的宇宙历险记 — 游戏规则配置
+//  修改游戏规则只需改这个区块的数值！
+// ============================================================
 
-function dist(a,b){return M.hypot(a.x-b.x,a.y-b.y)}
-function ang(a,b){return M.atan2(b.y-a.y,b.x-a.x)}
-function rnd(a,b){return a+M.random()*(b-a)}
-function edge(){var m=50,s=M.floor(M.random()*4),x,y;if(s===0){x=rnd(m,W-m);y=-m}else if(s===1){x=rnd(m,W-m);y=H+m}else if(s===2){x=-m;y=rnd(m,H-m)}else{x=W+m;y=rnd(m,H-m)}return{x:x,y:y,ia:M.atan2(H/2-y,W/2-x)}}
-function nearEarth(p){return dist(p,EARTH)<EARTH.r}
-function pt(x,y,c,n){for(var i=0;i<n;i++){var a=M.random()*M.PI*2;pts.push({x,y,vx:M.cos(a)*rnd(1,5),vy:M.sin(a)*rnd(1,5),l:1,d:rnd(0.02,0.06),c:c,s:rnd(1.5,5)})}}
+var CFG = {
+  // ── 世界 ──
+  WORLD_W: 800,
+  WORLD_H: 449,
 
-function startGame(){
-  document.getElementById('overlay').style.display='none';
-  pl={x:W*0.5,y:H*0.55,hp:100,ammo:100,h:-M.PI/2,spd:3.5,inv:Date.now()+2000,boost:0};
-  reds=[];grns=[];jnk=[];cmt=[];bls=[];ebl=[];pks=[];pts=[];
-  ls=0;sc=0;lv=1;stg='play';tm=0;shk=0;
-  initLv(1);
+  // ── 玩家 ──
+  PLAYER_HP: 100,
+  PLAYER_AMMO: 100,
+  PLAYER_SPEED: 3.5,
+  PLAYER_BULLET_SPEED: 14,
+  PLAYER_FIRE_RATE: 60,      // ms between shots
+  PLAYER_INVINCIBLE_MS: 600,
+  PLAYER_DMG: 3,              // damage per bullet
+
+  // ── 红色外星人 ──
+  RED_BULLET_DMG: 10,         // 1/10 of max HP
+  RED_BULLET_SPEED: 3.5,
+  RED_BASE_COUNT: 3,          // level 1 count
+  RED_COUNT_SCALE: 2,         // +2 per level
+
+  // ── 绿色外星人（修改规则在这里！）──
+  GREEN_BULLET_IMMUNE: true,   // 子弹是否穿过（true=穿过无伤害）
+  GREEN_COLLISION_GAMEOVER: true, // 撞击是否游戏结束
+
+  // ── 宇宙垃圾 ──
+  JUNK_BASE_COUNT: 3,         // level 1 count
+  JUNK_COUNT_SCALE: 1,        // +1 per level
+
+  // ── 地球回血 ──
+  HEAL_RATE: 10,              // HP per second
+
+  // ── 能量包 ──
+  PACK_INTERVAL: 8000,        // base ms between random drops
+};
+
+// ============================================================
+//  🧮 数学工具
+// ============================================================
+var M = Math;
+
+function dist(a, b) {
+  return M.hypot(a.x - b.x, a.y - b.y);
 }
-function updateHUD(){
-  if(!pl)return;
-  document.getElementById('hp').textContent='❤️'+M.max(0,M.round(pl.hp));
-  document.getElementById('ammo').textContent='🔫'+pl.ammo;
-  document.getElementById('info').textContent='🌌第'+lv+'关 👾'+reds.length+' ⭐'+sc;
+
+function angleTo(a, b) {
+  return M.atan2(b.y - a.y, b.x - a.x);
 }
-function lvCfg(lv){return{mx:3+(lv-1)*2,sp:0.5+lv*0.2,hp:lv<=3?9:lv<=6?12:lv<=10?15:21,cd:M.max(600,1800-lv*100),jc:2+lv}}
-function initLv(lv){
-  var i,cfg=lvCfg(lv);
-  reds=[];for(i=0;i<cfg.mx;i++)reds.push({p:edge(),hp:cfg.hp,mhp:cfg.hp,ls:Date.now()+rnd(0,1500),cd:cfg.cd+rnd(-200,300),br:rnd(0,M.PI*2),ag:0,spd:cfg.sp});
-  var gc=M.max(1,M.floor(lv/3));
-  grns=[];for(i=0;i<gc;i++){var ep3=edge();grns.push({p:{x:ep3.x,y:ep3.y},wa:ep3.ia,wt:Date.now()+rnd(1000,3500),ea:rnd(0,1)<0.5?20:50,bc:rnd(0,M.PI*2),hp:0,spd:cfg.sp*0.8})}
-  var jsp=0.1+lv*0.06;
-  jnk=[];for(i=0;i<cfg.jc;i++){var ep4=edge();jnk.push({p:{x:ep4.x,y:ep4.y},r:rnd(10,20),rt:rnd(0,M.PI*2),rs:rnd(-0.02,0.02),df:ep4.ia,ds:rnd(jsp*0.5,jsp)})}
-  cmt=[];bls=[];ebl=[];pks=[];pts=[];
-  nk=Date.now()+rnd(8000,15000);nc=Date.now()+rnd(4000,8000);
+
+function rand(min, max) {
+  return min + M.random() * (max - min);
+}
+
+function clamp(v, lo, hi) {
+  return M.max(lo, M.min(hi, v));
+}
+
+/** 世界边缘随机位置 + 朝屏幕内的角度 */
+function spawnAtEdge() {
+  var m = 50, s = M.floor(M.random() * 4), x, y;
+  if (s === 0)      { x = rand(m, CFG.WORLD_W - m); y = -m; }
+  else if (s === 1) { x = rand(m, CFG.WORLD_W - m); y = CFG.WORLD_H + m; }
+  else if (s === 2) { x = -m; y = rand(m, CFG.WORLD_H - m); }
+  else              { x = CFG.WORLD_W + m; y = rand(m, CFG.WORLD_H - m); }
+  var cx = CFG.WORLD_W / 2, cy = CFG.WORLD_H / 2;
+  return { x: x, y: y, inAngle: M.atan2(cy - y, cx - x) };
+}
+
+function nearEarth(pos) {
+  return dist(pos, EARTH) < EARTH.r;
+}
+
+/** 粒子特效 */
+function spawnParticles(x, y, color, count) {
+  for (var i = 0; i < count; i++) {
+    var a = M.random() * M.PI * 2;
+    particles.push({
+      x: x, y: y,
+      vx: M.cos(a) * rand(1, 5),
+      vy: M.sin(a) * rand(1, 5),
+      life: 1,
+      decay: rand(0.02, 0.06),
+      color: color,
+      size: rand(1.5, 5)
+    });
+  }
+}
+
+// ============================================================
+//  📦 游戏状态
+// ============================================================
+var canvas, ctx;
+var screenW, screenH;
+var images = {};
+
+var player = null;
+var redAliens   = [];
+var greenAliens = [];
+var spaceJunk   = [];
+var comets      = [];
+var bullets     = [];
+var enemyBullets = [];
+var pickups     = [];
+var particles   = [];
+
+var camera  = { x: 0, y: 0 };
+var lastFrame = 0;
+var lastShot  = 0;
+var state     = 'title';   // 'title' | 'play' | 'over'
+var level     = 1;
+var score     = 0;
+var mouseShoot = false;
+
+var joystick = { cx: 130, cy: 300, r: 90, active: false, dx: 0, dy: 0 };
+var gameTime = 0;
+var shakeAmt = 0;
+
+var nextPickupTimer = 0;
+var nextCometTimer  = 0;
+
+// ── 地球 & 行星（固定位置）──
+var EARTH = { x: CFG.WORLD_W * 0.5,  y: CFG.WORLD_H * 0.63, r: 40 };
+var PLANETS = [
+  { x: CFG.WORLD_W * 0.16, y: CFG.WORLD_H * 0.26, r: 24 },
+  { x: CFG.WORLD_W * 0.84, y: CFG.WORLD_H * 0.37, r: 28 },
+  { x: CFG.WORLD_W * 0.32, y: CFG.WORLD_H * 0.72, r: 20 },
+  { x: CFG.WORLD_W * 0.76, y: CFG.WORLD_H * 0.78, r: 22 },
+  { x: CFG.WORLD_W * 0.5,  y: CFG.WORLD_H * 0.18, r: 18 },
+  { x: CFG.WORLD_W * 0.62, y: CFG.WORLD_H * 0.55, r: 17 }
+];
+
+// ============================================================
+//  🏭 实体生成
+// ============================================================
+
+/** 按关卡计算难度参数 */
+function levelConfig(lv) {
+  return {
+    redMax:    CFG.RED_BASE_COUNT + (lv - 1) * CFG.RED_COUNT_SCALE,
+    redSpeed:  0.5 + lv * 0.2,
+    redHP:     lv <= 3 ? 9 : lv <= 6 ? 12 : lv <= 10 ? 15 : 21,
+    redCD:     M.max(600, 1800 - lv * 100),
+    junkMax:   CFG.JUNK_BASE_COUNT + (lv - 1) * CFG.JUNK_COUNT_SCALE
+  };
+}
+
+function spawnRedAlien(cfg) {
+  var edge = spawnAtEdge();
+  return {
+    pos: { x: edge.x, y: edge.y },
+    hp: cfg.redHP, maxHp: cfg.redHP,
+    lastShot: Date.now() + rand(0, 1500),
+    cooldown: cfg.redCD + rand(-200, 300),
+    speed: cfg.redSpeed
+  };
+}
+
+function spawnGreenAlien(cfg) {
+  var edge = spawnAtEdge();
+  return {
+    pos: { x: edge.x, y: edge.y },
+    wanderAngle: edge.inAngle,
+    wanderTimer: Date.now() + rand(1000, 3500),
+    energyAmt: M.random() < 0.5 ? 20 : 50,
+    speed: cfg.redSpeed * 0.8
+  };
+}
+
+function spawnSpaceJunk(junkSpeed) {
+  var edge = spawnAtEdge();
+  return {
+    pos: { x: edge.x, y: edge.y },
+    radius: rand(10, 20),
+    rotation: rand(0, M.PI * 2),
+    rotSpeed: rand(-0.02, 0.02),
+    driftAngle: edge.inAngle,
+    driftSpeed: rand(junkSpeed * 0.5, junkSpeed)
+  };
+}
+
+function spawnComet() {
+  var s = M.floor(M.random() * 4), x, y, dir;
+  if      (s === 0) { x = rand(0, CFG.WORLD_W); y = -30;          dir = rand(M.PI * 0.3, M.PI * 0.7); }
+  else if (s === 1) { x = rand(0, CFG.WORLD_W); y = CFG.WORLD_H + 30; dir = rand(-M.PI * 0.7, -M.PI * 0.3); }
+  else if (s === 2) { x = -30; y = rand(0, CFG.WORLD_H);          dir = rand(-M.PI * 0.3, M.PI * 0.3); }
+  else              { x = CFG.WORLD_W + 30; y = rand(0, CFG.WORLD_H); dir = rand(M.PI * 0.7, M.PI * 1.3); }
+  comets.push({
+    pos: { x: x, y: y },
+    vx: M.cos(dir) * rand(2, 4),
+    vy: M.sin(dir) * rand(2, 4),
+    radius: rand(8, 14),
+    life: 300
+  });
+}
+
+// ============================================================
+//  🎯 关卡管理
+// ============================================================
+
+function initLevel(lv) {
+  var cfg = levelConfig(lv);
+  var i, edge;
+
+  // 红色外星人
+  redAliens = [];
+  for (i = 0; i < cfg.redMax; i++) {
+    redAliens.push(spawnRedAlien(cfg));
+  }
+
+  // 绿色外星人
+  var greenCount = M.max(1, M.floor(lv / 3));
+  greenAliens = [];
+  for (i = 0; i < greenCount; i++) {
+    greenAliens.push(spawnGreenAlien(cfg));
+  }
+
+  // 宇宙垃圾
+  var junkSpeed = 0.1 + lv * 0.06;
+  spaceJunk = [];
+  for (i = 0; i < cfg.junkMax; i++) {
+    spaceJunk.push(spawnSpaceJunk(junkSpeed));
+  }
+
+  // 清空其他
+  comets = [];
+  bullets = [];
+  enemyBullets = [];
+  pickups = [];
+  particles = [];
+
+  nextPickupTimer = Date.now() + rand(8000, 15000);
+  nextCometTimer  = Date.now() + rand(4000, 8000);
+
   updateHUD();
 }
-function fire(now,force){
-  if(!pl||pl.ammo<=0||now-ls<60||!force)return;
-  ls=now;pl.ammo--;
-  var fa=pl.h,bestD=9999;
-  for(var i=0;i<reds.length;i++){var d=dist(pl,reds[i].p);if(d<bestD){bestD=d;fa=ang(pl,reds[i].p)}}
-  for(var i=0;i<jnk.length;i++){var d=dist(pl,jnk[i].p);if(d<bestD){bestD=d;fa=ang(pl,jnk[i].p)}}
-  bls.push({p:{x:pl.x,y:pl.y},vx:M.cos(fa)*14,vy:M.sin(fa)*14,l:50});
+
+// ============================================================
+//  🎬 游戏流程
+// ============================================================
+
+function startGame() {
+  document.getElementById('overlay').style.display = 'none';
+
+  player = {
+    x: CFG.WORLD_W * 0.5, y: CFG.WORLD_H * 0.55,
+    hp:   CFG.PLAYER_HP,
+    ammo: CFG.PLAYER_AMMO,
+    heading: -M.PI / 2,
+    speed: CFG.PLAYER_SPEED,
+    invUntil: Date.now() + 2000,
+    boostUntil: 0
+  };
+
+  lastShot = 0;
+  score = 0;
+  level = 1;
+  state = 'play';
+  gameTime = 0;
+  shakeAmt = 0;
+
+  initLevel(1);
+}
+
+function gameOver(reason) {
+  state = 'over';
+  var overlay = document.getElementById('overlay');
+  overlay.style.display = 'flex';
+  overlay.innerHTML = '<div class="box"><h1>💀 挑战失败</h1><p>' + reason +
+    '<br>第' + level + '关 · 得分' + score +
+    '</p><button id="startBtn">🔄 重新开始</button></div>';
+  var btn = document.getElementById('startBtn');
+  btn.addEventListener('click', function(e) { e.preventDefault(); startGame(); });
+  btn.addEventListener('touchend', function(e) { e.preventDefault(); startGame(); });
+}
+
+function levelWin() {
+  score += level * 200;
+  setTimeout(function() {
+    level++;
+    player.hp   = M.min(CFG.PLAYER_HP, player.hp + 30);
+    player.ammo = M.min(CFG.PLAYER_AMMO, player.ammo + 30);
+    player.invUntil = Date.now() + 5000;
+    player.speed = CFG.PLAYER_SPEED;
+    player.boostUntil = 0;
+    initLevel(level);
+    state = 'play';
+    updateHUD();
+  }, 1500);
+}
+
+function updateHUD() {
+  if (!player) return;
+  document.getElementById('hp').textContent   = '❤️' + M.max(0, M.round(player.hp));
+  document.getElementById('ammo').textContent = '🔫' + player.ammo;
+  document.getElementById('info').textContent = '🌌第' + level + '关 👾' + redAliens.length + ' ⭐' + score;
+}
+
+// ============================================================
+//  🔫 射击
+// ============================================================
+
+function playerFire(now, force) {
+  if (!player || player.ammo <= 0 || now - lastShot < 60 || !force) return;
+  lastShot = now;
+  player.ammo--;
+
+  // 自动瞄准最近的红色外星人或宇宙垃圾
+  var aimAngle = player.heading;
+  var bestDist = 9999;
+
+  for (var i = 0; i < redAliens.length; i++) {
+    var d = dist(player, redAliens[i].pos);
+    if (d < bestDist) { bestDist = d; aimAngle = angleTo(player, redAliens[i].pos); }
+  }
+
+  for (var i = 0; i < spaceJunk.length; i++) {
+    var d = dist(player, spaceJunk[i].pos);
+    if (d < bestDist) { bestDist = d; aimAngle = angleTo(player, spaceJunk[i].pos); }
+  }
+
+  // 绿色外星人不会被锁定（不加入瞄准逻辑）
+
+  bullets.push({
+    pos: { x: player.x, y: player.y },
+    vx: M.cos(aimAngle) * CFG.PLAYER_BULLET_SPEED,
+    vy: M.sin(aimAngle) * CFG.PLAYER_BULLET_SPEED,
+    life: 50
+  });
+
   updateHUD();
 }
-function spawnComet(){
-  var s=M.floor(M.random()*4),x,y,dir;
-  if(s===0){x=rnd(0,W);y=-30;dir=rnd(M.PI*0.3,M.PI*0.7)}
-  else if(s===1){x=rnd(0,W);y=H+30;dir=rnd(-M.PI*0.7,-M.PI*0.3)}
-  else if(s===2){x=-30;y=rnd(0,H);dir=rnd(-M.PI*0.3,M.PI*0.3)}
-  else{x=W+30;y=rnd(0,H);dir=rnd(M.PI*0.7,M.PI*1.3)}
-  cmt.push({p:{x,y},vx:M.cos(dir)*rnd(2,4),vy:M.sin(dir)*rnd(2,4),r:rnd(8,14),l:300});
+
+// ============================================================
+//  🔄 每帧更新
+// ============================================================
+
+function update(dt) {
+  if (state !== 'play') return;
+  var now = Date.now();
+  gameTime += dt;
+  if (shakeAmt > 0) shakeAmt = M.max(0, shakeAmt - dt / 200);
+
+  // ── 玩家移动 ──
+  if (joystick.active && (joystick.dx || joystick.dy)) {
+    player.heading = M.atan2(joystick.dy, joystick.dx);
+  }
+  player.x += M.cos(player.heading) * player.speed * (dt / 16);
+  player.y += M.sin(player.heading) * player.speed * (dt / 16);
+  player.x = clamp(player.x, 25, CFG.WORLD_W - 25);
+  player.y = clamp(player.y, 25, CFG.WORLD_H - 25);
+
+  // ── 速度衰减 ──
+  if (now > player.boostUntil) {
+    if (player.speed > 3.5) player.speed = M.max(3.5, player.speed - 0.025 * (dt / 16));
+    else                    player.speed = M.max(1.6, player.speed - 0.008 * (dt / 16));
+  }
+
+  // ── 地球回血 ──
+  if (nearEarth(player)) {
+    player.hp = M.min(CFG.PLAYER_HP, player.hp + CFG.HEAL_RATE * (dt / 1000));
+    updateHUD();
+  }
+
+  // ── 射击 ──
+  if (mouseShoot) playerFire(now, true);
+
+  // ── 玩家碰撞检测 ──
+  for (var i = 0; i < redAliens.length; i++) {
+    if (dist(player, redAliens[i].pos) < 32) { gameOver('撞到红色外星人'); return; }
+  }
+  for (var i = 0; i < greenAliens.length; i++) {
+    if (dist(player, greenAliens[i].pos) < 32) { gameOver('撞到绿色外星人'); return; }
+  }
+  for (var i = 0; i < spaceJunk.length; i++) {
+    if (dist(player, spaceJunk[i].pos) < spaceJunk[i].radius + 14) { gameOver('撞到太空垃圾'); return; }
+  }
+  for (var i = comets.length - 1; i >= 0; i--) {
+    if (dist(player, comets[i].pos) < comets[i].radius + 16) { gameOver('被陨石撞毁'); return; }
+  }
+
+  // ── 玩家子弹 ──
+  for (var i = bullets.length - 1; i >= 0; i--) {
+    var b = bullets[i];
+    b.pos.x += b.vx * (dt / 16);
+    b.pos.y += b.vy * (dt / 16);
+    b.life--;
+
+    if (b.pos.x < -60 || b.pos.x > CFG.WORLD_W + 60 ||
+        b.pos.y < -60 || b.pos.y > CFG.WORLD_H + 60 || b.life <= 0) {
+      bullets.splice(i, 1);
+      continue;
+    }
+
+    var hit = false;
+
+    // 击中红色外星人
+    for (var j = redAliens.length - 1; j >= 0 && !hit; j--) {
+      var a = redAliens[j];
+      if (dist(b.pos, a.pos) < 38) {
+        a.hp -= CFG.PLAYER_DMG;
+        spawnParticles(b.pos.x, b.pos.y, '#f64', 8);
+        hit = true;
+        if (a.hp <= 0) {
+          spawnParticles(a.pos.x, a.pos.y, '#f84', 25);
+          redAliens.splice(j, 1);
+          score += 100;
+          updateHUD();
+          if (!redAliens.length) { levelWin(); return; }
+        }
+      }
+    }
+
+    // 绿色外星人免疫子弹 —— 子弹直接穿过，无任何效果
+
+    // 击中宇宙垃圾
+    if (!hit) {
+      for (var j = spaceJunk.length - 1; j >= 0; j--) {
+        var jk = spaceJunk[j];
+        if (dist(b.pos, jk.pos) < jk.radius + 10) {
+          spawnParticles(jk.pos.x, jk.pos.y, '#aac', 10);
+          spaceJunk.splice(j, 1);
+          hit = true;
+          break;
+        }
+      }
+    }
+
+    if (hit) bullets.splice(i, 1);
+  }
+
+  // ── 敌方子弹 ──
+  for (var i = enemyBullets.length - 1; i >= 0; i--) {
+    var eb = enemyBullets[i];
+    eb.pos.x += eb.vx * (dt / 16);
+    eb.pos.y += eb.vy * (dt / 16);
+    eb.life--;
+
+    if (eb.pos.x < -60 || eb.pos.x > CFG.WORLD_W + 60 ||
+        eb.pos.y < -60 || eb.pos.y > CFG.WORLD_H + 60 || eb.life <= 0) {
+      enemyBullets.splice(i, 1);
+      continue;
+    }
+
+    if (now > player.invUntil && dist(eb.pos, player) < 30) {
+      player.hp -= CFG.RED_BULLET_DMG;
+      player.invUntil = now + CFG.PLAYER_INVINCIBLE_MS;
+      spawnParticles(player.x, player.y, '#f33', 10);
+      enemyBullets.splice(i, 1);
+      updateHUD();
+      if (player.hp <= 0) { gameOver('火箭被击毁'); return; }
+    }
+  }
+
+  // ── 红色外星人 AI ──
+  for (var i = 0; i < redAliens.length; i++) {
+    var r = redAliens[i];
+    var spd = r.speed;
+
+    // 远离地球
+    if (dist(r.pos, EARTH) < EARTH.r + 40) {
+      var ea = angleTo(EARTH, r.pos);
+      r.pos.x += M.cos(ea) * 1.5 * (dt / 16);
+      r.pos.y += M.sin(ea) * 1.5 * (dt / 16);
+    } else {
+      var ag = angleTo(r.pos, player);
+      r.pos.x += M.cos(ag) * spd * (dt / 16);
+      r.pos.y += M.sin(ag) * spd * (dt / 16);
+    }
+
+    r.pos.x = clamp(r.pos.x, 35, CFG.WORLD_W - 35);
+    r.pos.y = clamp(r.pos.y, 35, CFG.WORLD_H - 35);
+
+    // 射击
+    if (now - r.lastShot >= r.cooldown) {
+      r.lastShot = now;
+      var bang = angleTo(r.pos, player);
+      enemyBullets.push({
+        pos: { x: r.pos.x, y: r.pos.y },
+        vx: M.cos(bang) * CFG.RED_BULLET_SPEED,
+        vy: M.sin(bang) * CFG.RED_BULLET_SPEED,
+        life: 110
+      });
+    }
+  }
+
+  // ── 绿色外星人 AI ──
+  for (var i = 0; i < greenAliens.length; i++) {
+    var g = greenAliens[i];
+    var gsp = g.speed;
+
+    if (dist(g.pos, EARTH) < EARTH.r + 40) {
+      var ea = angleTo(EARTH, g.pos);
+      g.pos.x += M.cos(ea) * 1.5 * (dt / 16);
+      g.pos.y += M.sin(ea) * 1.5 * (dt / 16);
+    } else {
+      if (now > g.wanderTimer) {
+        g.wanderAngle = rand(0, M.PI * 2);
+        g.wanderTimer = now + rand(1000, 3500);
+      }
+      g.pos.x += M.cos(g.wanderAngle) * gsp * (dt / 16);
+      g.pos.y += M.sin(g.wanderAngle) * gsp * (dt / 16);
+    }
+
+    g.pos.x = clamp(g.pos.x, 35, CFG.WORLD_W - 35);
+    g.pos.y = clamp(g.pos.y, 35, CFG.WORLD_H - 35);
+
+    // 玩家缺弹药时，绿色外星人掉落能量包
+    if (player.ammo < 40 && dist(g.pos, player) < 110 && M.random() < 0.004 * (dt / 16)) {
+      pickups.push({
+        pos: { x: g.pos.x, y: g.pos.y },
+        type: 'ammo',
+        life: 600,
+        vy: -0.5
+      });
+      var ep = spawnAtEdge();
+      g.pos.x = ep.x;
+      g.pos.y = ep.y;
+    }
+  }
+
+  // ── 随机能量包 ──
+  if (now > nextPickupTimer) {
+    var types = ['boost', 'ammo', 'ammo'];
+    pickups.push({
+      pos: { x: rand(80, CFG.WORLD_W - 80), y: rand(80, CFG.WORLD_H - 80) },
+      type: types[M.floor(M.random() * 3)],
+      life: 650,
+      vy: -0.3
+    });
+    nextPickupTimer = now + rand(5000, 12000);
+  }
+
+  // ── 拾取能量包 ──
+  for (var i = pickups.length - 1; i >= 0; i--) {
+    var pk = pickups[i];
+    pk.pos.y += pk.vy * (dt / 16);
+    pk.life--;
+
+    if (dist(pk.pos, player) < 28) {
+      if (pk.type === 'ammo') {
+        player.ammo = M.min(CFG.PLAYER_AMMO, player.ammo + (player.ammo < 50 ? 50 : 20));
+      } else {
+        player.speed = 7;
+        player.boostUntil = now + 3000;
+      }
+      pickups.splice(i, 1);
+      updateHUD();
+      continue;
+    }
+    if (pk.life <= 0 || pk.pos.y > CFG.WORLD_H + 60) {
+      pickups.splice(i, 1);
+    }
+  }
+
+  // ── 宇宙垃圾移动 ──
+  for (var i = 0; i < spaceJunk.length; i++) {
+    var j = spaceJunk[i];
+    j.pos.x += M.cos(j.driftAngle) * j.driftSpeed * (dt / 16);
+    j.pos.y += M.sin(j.driftAngle) * j.driftSpeed * (dt / 16);
+    if (j.pos.x < 15 || j.pos.x > CFG.WORLD_W - 15) j.driftAngle = M.PI - j.driftAngle;
+    if (j.pos.y < 15 || j.pos.y > CFG.WORLD_H - 15) j.driftAngle = -j.driftAngle;
+    j.pos.x = clamp(j.pos.x, 15, CFG.WORLD_W - 15);
+    j.pos.y = clamp(j.pos.y, 15, CFG.WORLD_H - 15);
+    j.rotation += j.rotSpeed * (dt / 16);
+  }
+
+  // ── 陨石（4关起）──
+  if (level >= 4) {
+    if (now > nextCometTimer) {
+      var ct = M.max(1, M.floor((level - 2) / 2));
+      if (comets.length < ct + 1) spawnComet();
+      nextCometTimer = now + rand(3000, 6000);
+    }
+    for (var i = comets.length - 1; i >= 0; i--) {
+      var cm = comets[i];
+      cm.pos.x += cm.vx * (dt / 16);
+      cm.pos.y += cm.vy * (dt / 16);
+      cm.life--;
+      if (cm.life <= 0 || cm.pos.x < -100 || cm.pos.x > CFG.WORLD_W + 100 ||
+          cm.pos.y < -100 || cm.pos.y > CFG.WORLD_H + 100) {
+        comets.splice(i, 1);
+      }
+    }
+  }
+
+  // ── 粒子衰减 ──
+  for (var i = particles.length - 1; i >= 0; i--) {
+    var p = particles[i];
+    p.x += p.vx * (dt / 16);
+    p.y += p.vy * (dt / 16);
+    p.life -= p.decay * (dt / 16);
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  // ── 相机跟随 ──
+  camera.x = clamp(player.x - screenW / 2, 0, CFG.WORLD_W - screenW);
+  camera.y = clamp(player.y - screenH / 2, 0, CFG.WORLD_H - screenH);
+
+  // ── 补充绿色外星人 ──
+  var targetGreen = M.max(1, M.floor(level / 3));
+  if (greenAliens.length < targetGreen && M.random() < 0.004 * (dt / 16)) {
+    var ep = spawnAtEdge();
+    var cfg = levelConfig(level);
+    greenAliens.push({
+      pos: { x: ep.x, y: ep.y },
+      wanderAngle: ep.inAngle,
+      wanderTimer: Date.now() + rand(1000, 3500),
+      energyAmt: M.random() < 0.5 ? 20 : 50,
+      speed: cfg.redSpeed * 0.8
+    });
+  }
+
+  // ── 数值钳制 ──
+  player.hp   = clamp(player.hp,   0, CFG.PLAYER_HP);
+  player.ammo = clamp(player.ammo, 0, CFG.PLAYER_AMMO);
+  player.speed = clamp(player.speed, 1.6, 7);
 }
-function over(s){
-  stg='over';
-  document.getElementById('overlay').style.display='flex';
-  document.getElementById('overlay').innerHTML='<div class="box"><h1>💀 挑战失败</h1><p>'+s+'<br>第'+lv+'关 · 得分'+sc+'</p><button id="startBtn">🔄 重新开始</button></div>';
-  document.getElementById('startBtn').addEventListener('click',startGame);
-  document.getElementById('startBtn').addEventListener('touchend',function(e){e.preventDefault();startGame()});
-}
-function win(){
-  sc+=lv*200;
-  setTimeout(function(){
-    lv++;pl.hp=M.min(100,pl.hp+30);pl.ammo=M.min(100,pl.ammo+30);pl.inv=Date.now()+5000;pl.spd=3.5;pl.boost=0;
-    initLv(lv);stg='play';updateHUD();
-  },1500);
+
+// ============================================================
+//  🎨 渲染
+// ============================================================
+
+function worldToScreen(wx, wy, shakeX, shakeY) {
+  return {
+    x: wx - camera.x + shakeX,
+    y: wy - camera.y + shakeY
+  };
 }
 
-function update(dt){
-  if(stg!=='play')return;
-  var now=Date.now();tm+=dt;if(shk>0)shk=M.max(0,shk-dt/200);
-  if(joy.on&&(joy.dx||joy.dy))pl.h=M.atan2(joy.dy,joy.dx);
-  pl.x+=M.cos(pl.h)*pl.spd*(dt/16);pl.y+=M.sin(pl.h)*pl.spd*(dt/16);
-  pl.x=M.max(25,M.min(W-25,pl.x));pl.y=M.max(25,M.min(H-25,pl.y));
-  if(now>pl.boost){if(pl.spd>3.5)pl.spd=M.max(3.5,pl.spd-0.025*(dt/16));else pl.spd=M.max(1.6,pl.spd-0.008*(dt/16))}
-  if(now>pl.boost&&pl.spd>3.5)pl.spd=M.max(3.5,pl.spd-0.03*(dt/16));
-  if(nearEarth(pl)){pl.hp=M.min(100,pl.hp+10*(dt/1000));updateHUD()}
-  if(mshoot)fire(now,true);
-  for(var i=0;i<reds.length;i++)if(dist(pl,reds[i].p)<32){over('撞到红色外星人');return}
-  for(var i=0;i<grns.length;i++)if(dist(pl,grns[i].p)<32){over('撞到绿色外星人');return}
-  for(var i=0;i<jnk.length;i++)if(dist(pl,jnk[i].p)<jnk[i].r+14){over('撞到太空垃圾');return}
-  for(var i=cmt.length-1;i>=0;i--)if(dist(pl,cmt[i].p)<cmt[i].r+16){over('被陨石撞毁');return}
-  for(var i=bls.length-1;i>=0;i--){var b=bls[i];b.p.x+=b.vx*(dt/16);b.p.y+=b.vy*(dt/16);b.l--;if(b.p.x<-60||b.p.x>W+60||b.p.y<-60||b.p.y>H+60||b.l<=0){bls.splice(i,1);continue}
-    var hit=false;
-    for(var j=reds.length-1;j>=0&&!hit;j--){var a=reds[j];if(dist(b.p,a.p)<38){a.hp-=3;pt(b.p.x,b.p.y,'#f64',8);hit=true;
-      if(a.hp<=0){pt(a.p.x,a.p.y,'#f84',25);reds.splice(j,1);sc+=100;updateHUD();if(!reds.length){sc+=lv*200;win();return}}}}
-    
-    if(!hit)for(var j=jnk.length-1;j>=0;j--)if(dist(b.p,jnk[j].p)<jnk[j].r+10){pt(jnk[j].p.x,jnk[j].p.y,'#aac',10);jnk.splice(j,1);hit=true;break}
-    if(hit)bls.splice(i,1);
+function render() {
+  ctx.clearRect(0, 0, screenW, screenH);
+  var now = Date.now();
+  var t = gameTime;
+
+  var sx = 0, sy = 0;
+  if (shakeAmt > 0) {
+    sx = (M.random() - 0.5) * shakeAmt * 12;
+    sy = (M.random() - 0.5) * shakeAmt * 12;
   }
-  for(var i=ebl.length-1;i>=0;i--){var b=ebl[i];b.p.x+=b.vx*(dt/16);b.p.y+=b.vy*(dt/16);b.l--;if(b.p.x<-60||b.p.x>W+60||b.p.y<-60||b.p.y>H+60||b.l<=0){ebl.splice(i,1);continue}
-    if(now>pl.inv&&dist(b.p,pl)<30){pl.hp-=10;pl.inv=now+600;pt(pl.x,pl.y,'#f33',10);ebl.splice(i,1);updateHUD();if(pl.hp<=0){over('火箭被击毁');return}}}
-  for(var i=0;i<reds.length;i++){var a=reds[i],asp=a.spd||1.05;
-    if(dist(a.p,EARTH)<EARTH.r+40){var ea=ang(EARTH,a.p);a.p.x+=M.cos(ea)*1.5*(dt/16);a.p.y+=M.sin(ea)*1.5*(dt/16)}
-    else{var ag2=ang(a.p,pl);a.p.x+=M.cos(ag2)*asp*(dt/16);a.p.y+=M.sin(ag2)*asp*(dt/16)}
-    a.p.x=M.max(35,M.min(W-35,a.p.x));a.p.y=M.max(35,M.min(H-35,a.p.y));a.br+=dt/300;a.ag=M.max(0,a.ag-dt/400);
-    if(now-a.ls>=a.cd){a.ls=now;ebl.push({p:{x:a.p.x,y:a.p.y},vx:M.cos(ang(a.p,pl))*3.5,vy:M.sin(ang(a.p,pl))*3.5,l:110})}
+
+  var w2s = function(wx, wy) { return worldToScreen(wx, wy, sx, sy); };
+
+  // ── 背景地图 ──
+  if (images.m) {
+    ctx.drawImage(images.m, -camera.x, -camera.y, CFG.WORLD_W, CFG.WORLD_H);
+  } else {
+    ctx.fillStyle = '#0a0030';
+    ctx.fillRect(0, 0, screenW, screenH);
   }
-  for(var i=0;i<grns.length;i++){var g=grns[i],gsp=g.spd||1.7;
-    if(dist(g.p,EARTH)<EARTH.r+40){var ea=ang(EARTH,g.p);g.p.x+=M.cos(ea)*1.5*(dt/16);g.p.y+=M.sin(ea)*1.5*(dt/16)}
-    else{if(now>g.wt){g.wa=rnd(0,M.PI*2);g.wt=now+rnd(1000,3500)}g.p.x+=M.cos(g.wa)*gsp*(dt/16);g.p.y+=M.sin(g.wa)*gsp*(dt/16)}
-    g.p.x=M.max(35,M.min(W-35,g.p.x));g.p.y=M.max(35,M.min(H-35,g.p.y));
-    if(pl.ammo<40&&dist(g.p,pl)<110&&M.random()<0.004*(dt/16)){pks.push({p:{x:g.p.x,y:g.p.y},tp:'ammo',l:600,vy:-0.5});var ep=edge();g.p.x=ep.x;g.p.y=ep.y}
+
+  // ── 地球光环 ──
+  var es = w2s(EARTH.x, EARTH.y);
+  var g = ctx.createRadialGradient(es.x, es.y, EARTH.r * 0.3, es.x, es.y, EARTH.r * 1.5);
+  g.addColorStop(0, 'rgba(100,220,255,0.15)');
+  g.addColorStop(1, 'rgba(0,100,200,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(es.x, es.y, EARTH.r * 1.5, 0, M.PI * 2);
+  ctx.fill();
+
+  // ── 行星 ──
+  for (var i = 0; i < PLANETS.length; i++) {
+    var ps = w2s(PLANETS[i].x, PLANETS[i].y);
+    ctx.strokeStyle = 'rgba(255,120,60,0.3)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 10]);
+    ctx.beginPath();
+    ctx.arc(ps.x, ps.y, PLANETS[i].r, 0, M.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
   }
-  if(now>nk){var ts=['boost','ammo','ammo'];pks.push({p:{x:rnd(80,W-80),y:rnd(80,H-80)},tp:ts[M.floor(M.random()*3)],l:650,vy:-0.3});nk=now+rnd(5000,12000)}
-  for(var i=pks.length-1;i>=0;i--){var pk=pks[i];pk.p.y+=pk.vy*(dt/16);pk.l--;
-    if(dist(pk.p,pl)<28){if(pk.tp==='ammo'){pl.ammo=M.min(100,pl.ammo+(pl.ammo<50?50:20))}else{pl.spd=7;pl.boost=now+3000}pks.splice(i,1);updateHUD();continue}
-    if(pk.l<=0||pk.p.y>H+60)pks.splice(i,1)}
-  for(var i=0;i<jnk.length;i++){var j=jnk[i];j.p.x+=M.cos(j.df)*j.ds*(dt/16);j.p.y+=M.sin(j.df)*j.ds*(dt/16);if(j.p.x<15||j.p.x>W-15)j.df=M.PI-j.df;if(j.p.y<15||j.p.y>H-15)j.df=-j.df;j.p.x=M.max(15,M.min(W-15,j.p.x));j.p.y=M.max(15,M.min(H-15,j.p.y));j.rt+=j.rs*(dt/16)}
-  if(lv>=4){if(now>nc){var ct=M.max(1,M.floor((lv-2)/2));if(cmt.length<ct+1)spawnComet();nc=now+rnd(3000,6000)}
-    for(var i=cmt.length-1;i>=0;i--){var cm=cmt[i];cm.p.x+=cm.vx*(dt/16);cm.p.y+=cm.vy*(dt/16);cm.l--;if(cm.l<=0||cm.p.x<-100||cm.p.x>W+100||cm.p.y<-100||cm.p.y>H+100)cmt.splice(i,1)}}
-  for(var i=pts.length-1;i>=0;i--){var p=pts[i];p.x+=p.vx*(dt/16);p.y+=p.vy*(dt/16);p.l-=p.d*(dt/16);if(p.l<=0)pts.splice(i,1)}
-  cam.x=pl.x-Wr/2;cam.y=pl.y-Hr/2;cam.x=M.max(0,M.min(W-Wr,cam.x));cam.y=M.max(0,M.min(H-Hr,cam.y));
-  var tg=M.max(1,M.floor(lv/3));if(grns.length<tg&&M.random()<0.004*(dt/16)){var ep5=edge();grns.push({p:{x:ep5.x,y:ep5.y},wa:ep5.ia,wt:Date.now()+rnd(1000,3500),ea:rnd(0,1)<0.5?20:50,bc:rnd(0,M.PI*2),hp:0,spd:lvCfg(lv).sp*0.8})}
-  pl.hp=M.max(0,M.min(100,pl.hp));pl.ammo=M.max(0,M.min(100,pl.ammo));pl.spd=M.max(1.6,M.min(7,pl.spd));
+
+  // ── 宇宙垃圾 ──
+  for (var i = 0; i < spaceJunk.length; i++) {
+    var jk = spaceJunk[i];
+    var js = w2s(jk.pos.x, jk.pos.y);
+    ctx.save();
+    ctx.translate(js.x, js.y);
+    ctx.rotate(jk.rotation);
+    ctx.fillStyle = '#111';
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-jk.radius, 0);
+    ctx.lineTo(-jk.radius * 0.3, -jk.radius * 0.6);
+    ctx.lineTo( jk.radius * 0.5, -jk.radius * 0.3);
+    ctx.lineTo( jk.radius,        jk.radius * 0.2);
+    ctx.lineTo( jk.radius * 0.4,  jk.radius * 0.5);
+    ctx.lineTo(-jk.radius * 0.5,  jk.radius * 0.7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── 陨石 ──
+  for (var i = 0; i < comets.length; i++) {
+    var cm = comets[i];
+    var cs = w2s(cm.pos.x, cm.pos.y);
+    var ca = M.atan2(cm.vy, cm.vx);
+    ctx.save();
+    ctx.translate(cs.x, cs.y);
+    ctx.rotate(ca);
+    var tl = ctx.createLinearGradient(-30, 0, -cm.radius, 0);
+    tl.addColorStop(0, 'rgba(255,200,100,0)');
+    tl.addColorStop(0.5, 'rgba(255,150,50,0.6)');
+    tl.addColorStop(1, 'rgba(255,200,80,1)');
+    ctx.fillStyle = tl;
+    ctx.beginPath();
+    ctx.moveTo(-cm.radius, 0);
+    ctx.lineTo(-35, -cm.radius * 0.4);
+    ctx.lineTo(-35,  cm.radius * 0.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(0, 0, cm.radius * 0.6, 0, M.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ── 能量包 ──
+  for (var i = 0; i < pickups.length; i++) {
+    var pk = pickups[i];
+    var ps = w2s(pk.pos.x, pk.pos.y);
+    var bob = M.sin(pk.life * 0.1) * 6;
+    var py = ps.y + bob;
+    if (pk.type === 'boost') {
+      ctx.fillStyle = '#fd0';
+      ctx.beginPath();
+      ctx.arc(ps.x, py, 14, 0, M.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚡', ps.x, py + 5);
+    } else {
+      ctx.fillStyle = '#4f8';
+      ctx.beginPath();
+      ctx.arc(ps.x, py, 12, 0, M.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🔫', ps.x, py + 4);
+    }
+  }
+
+  // ── 玩家子弹 ──
+  for (var i = 0; i < bullets.length; i++) {
+    var bs = w2s(bullets[i].pos.x, bullets[i].pos.y);
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(bs.x, bs.y, 5, 0, M.PI * 2);
+    ctx.fill();
+  }
+
+  // ── 敌方子弹 ──
+  for (var i = 0; i < enemyBullets.length; i++) {
+    var bs = w2s(enemyBullets[i].pos.x, enemyBullets[i].pos.y);
+    ctx.fillStyle = '#f44';
+    ctx.beginPath();
+    ctx.arc(bs.x, bs.y, 4, 0, M.PI * 2);
+    ctx.fill();
+  }
+
+  // ── 红色外星人 ──
+  for (var i = 0; i < redAliens.length; i++) {
+    var r = redAliens[i];
+    var rs = w2s(r.pos.x, r.pos.y);
+    if (images.r) {
+      ctx.save();
+      ctx.translate(rs.x, rs.y);
+      ctx.rotate(angleTo(r.pos, player) + M.PI / 2);
+      ctx.drawImage(images.r, -40, -22, 80, 44);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = '#f33';
+      ctx.beginPath();
+      ctx.arc(rs.x, rs.y, 18, 0, M.PI * 2);
+      ctx.fill();
+    }
+    // HP 条
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(rs.x - 14, rs.y - 26, 28, 4);
+    var hpRatio = r.hp / r.maxHp;
+    ctx.fillStyle = hpRatio > 0.5 ? '#5f5' : hpRatio > 0.25 ? '#fa3' : '#f33';
+    ctx.fillRect(rs.x - 14, rs.y - 26, 28 * hpRatio, 4);
+  }
+
+  // ── 绿色外星人 ──
+  for (var i = 0; i < greenAliens.length; i++) {
+    var gr = greenAliens[i];
+    var gs = w2s(gr.pos.x, gr.pos.y);
+    if (images.g) {
+      ctx.save();
+      ctx.translate(gs.x, gs.y);
+      ctx.rotate(gr.wanderAngle + M.PI / 2);
+      ctx.drawImage(images.g, -40, -22, 80, 44);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = '#4f4';
+      ctx.beginPath();
+      ctx.arc(gs.x, gs.y, 18, 0, M.PI * 2);
+      ctx.fill();
+    }
+    // 友好标记
+    ctx.strokeStyle = 'rgba(80,255,130,0.4)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.arc(gs.x, gs.y, 26, 0, M.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // ── 玩家火箭 ──
+  if (player) {
+    var ps = w2s(player.x, player.y);
+
+    if (images.p) {
+      ctx.save();
+      ctx.translate(ps.x, ps.y);
+      ctx.rotate(player.heading + M.PI / 2);
+
+      // 尾焰
+      var fl = M.abs(M.sin(t / 60)) * 0.5 + 0.5;
+      ctx.fillStyle = 'rgba(255,136,0,0.8)';
+      ctx.beginPath();
+      ctx.moveTo(-8, 35);
+      ctx.lineTo(0, 35 + 28 * fl);
+      ctx.lineTo(8, 35);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.drawImage(images.p, -50, -50, 100, 100);
+      ctx.restore();
+    }
+
+    // 无敌护盾
+    if (now < player.invUntil) {
+      ctx.strokeStyle = 'rgba(100,200,255,' + (0.4 + M.sin(now / 30) * 0.3) + ')';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(ps.x, ps.y, 36, 0, M.PI * 2);
+      ctx.stroke();
+    }
+
+    // 玩家 HP 条
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(ps.x - 18, ps.y - 36, 36, 5);
+    ctx.fillStyle = player.hp > 50 ? '#4f4' : player.hp > 25 ? '#fa3' : '#f33';
+    ctx.fillRect(ps.x - 18, ps.y - 36, 36 * (player.hp / 100), 5);
+  }
+
+  // ── 粒子 ──
+  for (var i = 0; i < particles.length; i++) {
+    var p = particles[i];
+    var ps3 = w2s(p.x, p.y);
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(ps3.x, ps3.y, p.size * p.life, 0, M.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // ── 虚拟摇杆 ──
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.arc(joystick.cx, joystick.cy, joystick.r, 0, M.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  if (joystick.active && (joystick.dx || joystick.dy)) {
+    var ja = M.atan2(joystick.dy, joystick.dx);
+    var jl = M.min(joystick.r, M.hypot(joystick.dx, joystick.dy) * 0.8);
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(joystick.cx, joystick.cy);
+    ctx.lineTo(joystick.cx + M.cos(ja) * jl, joystick.cy + M.sin(ja) * jl);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath();
+    ctx.arc(joystick.cx + joystick.dx * 0.6, joystick.cy + joystick.dy * 0.6, 14, 0, M.PI * 2);
+    ctx.fill();
+  }
 }
 
-function render(){
-  ctx.clearRect(0,0,Wr,Hr);var now=Date.now(),t=tm;
-  var sx=0,sy=0;if(shk>0){sx=(M.random()-0.5)*shk*12;sy=(M.random()-0.5)*shk*12}
-  var w2s=function(wx,wy){return{x:wx-cam.x+sx,y:wy-cam.y+sy}};
-  if(imgs.m)ctx.drawImage(imgs.m,-cam.x,-cam.y,W,H);
-  else{ctx.fillStyle='#0a0030';ctx.fillRect(0,0,Wr,Hr)}
-  var es=w2s(EARTH.x,EARTH.y);var g=ctx.createRadialGradient(es.x,es.y,EARTH.r*0.3,es.x,es.y,EARTH.r*1.5);g.addColorStop(0,'rgba(100,220,255,0.15)');g.addColorStop(1,'rgba(0,100,200,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(es.x,es.y,EARTH.r*1.5,0,M.PI*2);ctx.fill();
-  for(var i=0;i<PLANETS.length;i++){var ps=w2s(PLANETS[i].x,PLANETS[i].y);ctx.strokeStyle='rgba(255,120,60,0.3)';ctx.lineWidth=2;ctx.setLineDash([6,10]);ctx.beginPath();ctx.arc(ps.x,ps.y,PLANETS[i].r,0,M.PI*2);ctx.stroke();ctx.setLineDash([])}
-  for(var i=0;i<jnk.length;i++){var jk=jnk[i],js=w2s(jk.p.x,jk.p.y);ctx.save();ctx.translate(js.x,js.y);ctx.rotate(jk.rt);ctx.fillStyle='#111';ctx.strokeStyle='#333';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-jk.r,0);ctx.lineTo(-jk.r*0.3,-jk.r*0.6);ctx.lineTo(jk.r*0.5,-jk.r*0.3);ctx.lineTo(jk.r,jk.r*0.2);ctx.lineTo(jk.r*0.4,jk.r*0.5);ctx.lineTo(-jk.r*0.5,jk.r*0.7);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore()}
-  for(var i=0;i<cmt.length;i++){var cm=cmt[i],cs=w2s(cm.p.x,cm.p.y);var ca=M.atan2(cm.vy,cm.vx);ctx.save();ctx.translate(cs.x,cs.y);ctx.rotate(ca);var tl=ctx.createLinearGradient(-30,0,-cm.r,0);tl.addColorStop(0,'rgba(255,200,100,0)');tl.addColorStop(0.5,'rgba(255,150,50,0.6)');tl.addColorStop(1,'rgba(255,200,80,1)');ctx.fillStyle=tl;ctx.beginPath();ctx.moveTo(-cm.r,0);ctx.lineTo(-35,-cm.r*0.4);ctx.lineTo(-35,cm.r*0.4);ctx.closePath();ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,0,cm.r*0.6,0,M.PI*2);ctx.fill();ctx.restore()}
-  for(var i=0;i<pks.length;i++){var pk=pks[i],ps=w2s(pk.p.x,pk.p.y),bob=M.sin(pk.l*0.1)*6,py=ps.y+bob;
-    if(pk.tp==='boost'){ctx.fillStyle='#fd0';ctx.beginPath();ctx.arc(ps.x,py,14,0,M.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 16px sans-serif';ctx.textAlign='center';ctx.fillText('⚡',ps.x,py+5)}
-    else{ctx.fillStyle='#4f8';ctx.beginPath();ctx.arc(ps.x,py,12,0,M.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.fillText('🔫',ps.x,py+4)}
-  }
-  for(var i=0;i<bls.length;i++){var bs=w2s(bls[i].p.x,bls[i].p.y);ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bs.x,bs.y,5,0,M.PI*2);ctx.fill()}
-  for(var i=0;i<ebl.length;i++){var bs=w2s(ebl[i].p.x,ebl[i].p.y);ctx.fillStyle='#f44';ctx.beginPath();ctx.arc(bs.x,bs.y,4,0,M.PI*2);ctx.fill()}
-  for(var i=0;i<reds.length;i++){var a=reds[i],as=w2s(a.p.x,a.p.y);
-    if(imgs.r){ctx.save();ctx.translate(as.x,as.y);ctx.rotate(ang(a.p,pl)+M.PI/2);ctx.drawImage(imgs.r,-40,-22,80,44);ctx.restore()}
-    else{ctx.fillStyle='#f33';ctx.beginPath();ctx.arc(as.x,as.y,18,0,M.PI*2);ctx.fill()}
-    ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(as.x-14,as.y-26,28,4);ctx.fillStyle=a.hp/a.mhp>0.5?'#5f5':a.hp/a.mhp>0.25?'#fa3':'#f33';ctx.fillRect(as.x-14,as.y-26,28*(a.hp/a.mhp),4);
-  }
-  for(var i=0;i<grns.length;i++){var g2=grns[i],gs=w2s(g2.p.x,g2.p.y);
-    if(imgs.g){ctx.save();ctx.translate(gs.x,gs.y);ctx.rotate(g2.wa+M.PI/2);ctx.drawImage(imgs.g,-40,-22,80,44);ctx.restore()}
-    else{ctx.fillStyle='#4f4';ctx.beginPath();ctx.arc(gs.x,gs.y,18,0,M.PI*2);ctx.fill()}
-    ctx.strokeStyle='rgba(80,255,130,0.4)';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(gs.x,gs.y,26,0,M.PI*2);ctx.stroke();ctx.setLineDash([]);
-  }
-  // Player rocket - always visible, no blinking
-  if(pl){var ps=w2s(pl.x,pl.y);
-    if(imgs.p){ctx.save();ctx.translate(ps.x,ps.y);ctx.rotate(pl.h+M.PI/2);
-      var fl=M.abs(M.sin(t/60))*0.5+0.5;ctx.fillStyle='rgba(255,136,0,0.8)';ctx.beginPath();ctx.moveTo(-8,35);ctx.lineTo(0,35+28*fl);ctx.lineTo(8,35);ctx.closePath();ctx.fill();
-      ctx.drawImage(imgs.p,-50,-50,100,100);ctx.restore()}
-    // Shield ring during invincibility
-    if(now<pl.inv){ctx.strokeStyle='rgba(100,200,255,'+(0.4+M.sin(now/30)*0.3)+')';ctx.lineWidth=5;ctx.beginPath();ctx.arc(ps.x,ps.y,36,0,M.PI*2);ctx.stroke()}
-    ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(ps.x-18,ps.y-36,36,5);ctx.fillStyle=pl.hp>50?'#4f4':pl.hp>25?'#fa3':'#f33';ctx.fillRect(ps.x-18,ps.y-36,36*(pl.hp/100),5);
-  }
-  for(var i=0;i<pts.length;i++){var p2=pts[i],ps3=w2s(p2.x,p2.y);ctx.globalAlpha=p2.l;ctx.fillStyle=p2.c;ctx.beginPath();ctx.arc(ps3.x,ps3.y,p2.s*p2.l,0,M.PI*2);ctx.fill()}ctx.globalAlpha=1;
-  ctx.strokeStyle='rgba(255,255,255,0.25)';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(joy.cx,joy.cy,joy.r,0,M.PI*2);ctx.stroke();ctx.setLineDash([]);
-  if(joy.on&&(joy.dx||joy.dy)){var ja=M.atan2(joy.dy,joy.dx),jl=M.min(joy.r,M.hypot(joy.dx,joy.dy)*0.8);ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=3;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(joy.cx,joy.cy);ctx.lineTo(joy.cx+M.cos(ja)*jl,joy.cy+M.sin(ja)*jl);ctx.stroke();ctx.fillStyle='rgba(255,255,255,0.5)';ctx.beginPath();ctx.arc(joy.cx+joy.dx*0.6,joy.cy+joy.dy*0.6,14,0,M.PI*2);ctx.fill()}
+// ============================================================
+//  🔁 游戏循环
+// ============================================================
+
+function gameLoop(ts) {
+  if (!lastFrame) lastFrame = ts;
+  var dt = ts - lastFrame;
+  lastFrame = ts;
+  if (dt > 120) dt = 120;
+
+  update(dt);
+  render();
+  requestAnimationFrame(gameLoop);
 }
 
-function loop(ts){if(!lt)lt=ts;var dt=ts-lt;lt=ts;if(dt>120)dt=120;update(dt);render();requestAnimationFrame(loop)}
+// ============================================================
+//  🚀 启动
+// ============================================================
 
-// === INIT ===
-cv=document.getElementById('c');ctx=cv.getContext('2d');
-function resize(){Wr=window.innerWidth;Hr=window.innerHeight;cv.width=Wr;cv.height=Hr;joy.cy=Hr-140}
-resize();window.addEventListener('resize',resize);
+canvas = document.getElementById('c');
+ctx = canvas.getContext('2d');
 
-// Load images
-var list={p:'主角.png',m:'大地图.png',r:'红色外星人.png',g:'绿色外星人.png'};
-var keys=Object.keys(list),n=0;
-for(var k in list){(function(kk){
-  var img=new Image();imgs[kk]=null;
-  img.onload=function(){imgs[kk]=img;n++;if(n>=keys.length){lt=Date.now();loop()}};
-  img.onerror=function(){n++;if(n>=keys.length){lt=Date.now();loop()}};
-  img.src=list[kk];
-})(k)}
+function resize() {
+  screenW = window.innerWidth;
+  screenH = window.innerHeight;
+  canvas.width  = screenW;
+  canvas.height = screenH;
+  joystick.cy = screenH - 140;
+}
+resize();
+window.addEventListener('resize', resize);
 
-// === BUTTON: multiple event types for compatibility ===
-var btn=document.getElementById('startBtn');
-btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();startGame()});
-btn.addEventListener('touchend',function(e){e.preventDefault();e.stopPropagation();startGame()});
-btn.addEventListener('touchstart',function(e){e.preventDefault();e.stopPropagation()});
+// ── 加载图片 ──
+var imgList = { p: '主角.png', m: '大地图.png', r: '红色外星人.png', g: '绿色外星人.png' };
+var imgKeys = Object.keys(imgList);
+var imgLoaded = 0;
 
-// Force hide white borders
-try{document.body.scrollIntoView()}catch(e){}
+for (var k in imgList) {
+  (function(key) {
+    var img = new Image();
+    images[key] = null;
+    img.onload = function() {
+      images[key] = img;
+      imgLoaded++;
+      if (imgLoaded >= imgKeys.length) { lastFrame = Date.now(); gameLoop(); }
+    };
+    img.onerror = function() {
+      imgLoaded++;
+      if (imgLoaded >= imgKeys.length) { lastFrame = Date.now(); gameLoop(); }
+    };
+    img.src = imgList[key];
+  })(k);
+}
 
-// === TOUCH for joystick & shoot ===
-cv.addEventListener('touchstart',function(e){e.preventDefault();
-  if(stg!=='play')return;
-  for(var i=0;i<e.touches.length;i++){var t=e.touches[i];
-    if(t.clientX<Wr*0.4&&t.clientY>Hr*0.5){var dx=t.clientX-joy.cx,dy=t.clientY-joy.cy;if(M.hypot(dx,dy)<joy.r*1.5){joy.on=true;joy.dx=dx;joy.dy=dy}}
-    else{mshoot=true}
-  }
-},{passive:false});
-cv.addEventListener('touchmove',function(e){e.preventDefault();
-  if(stg!=='play')return;var hasL=false,hasR=false;
-  for(var i=0;i<e.touches.length;i++){var t=e.touches[i];
-    if(t.clientX<Wr*0.4&&t.clientY>Hr*0.5){var dx=t.clientX-joy.cx,dy=t.clientY-joy.cy;if(M.hypot(dx,dy)<joy.r*1.5){hasL=true;joy.dx=dx;joy.dy=dy}}
-    else{hasR=true}
-  }
-  if(!hasL)joy.on=false;mshoot=hasR;
-},{passive:false});
-cv.addEventListener('touchend',function(e){
-  var hasL=false,hasR=false;
-  for(var i=0;i<e.touches.length;i++){if(e.touches[i].clientX<Wr*0.4&&e.touches[i].clientY>Hr*0.5)hasL=true;else hasR=true}
-  if(!hasL)joy.on=false;mshoot=hasR;
+// ── 开始按钮 ──
+var startBtn = document.getElementById('startBtn');
+startBtn.addEventListener('click', function(e) {
+  e.preventDefault(); e.stopPropagation(); startGame();
+});
+startBtn.addEventListener('touchend', function(e) {
+  e.preventDefault(); e.stopPropagation(); startGame();
+});
+startBtn.addEventListener('touchstart', function(e) {
+  e.preventDefault(); e.stopPropagation();
 });
 
-// Desktop mouse
-cv.addEventListener('mousemove',function(e){if(stg==='play'&&e.clientX<Wr*0.4){var dx=e.clientX-joy.cx,dy=e.clientY-joy.cy;if(M.hypot(dx,dy)<joy.r*1.5){joy.on=true;joy.dx=dx;joy.dy=dy}}});
-cv.addEventListener('mousedown',function(e){if(stg==='play'&&e.clientX>=Wr*0.4)mshoot=true});
-cv.addEventListener('mouseup',function(){mshoot=false;joy.on=false});
+// 防止白边
+try { document.body.scrollIntoView(); } catch(e) {}
+
+// ── 触摸控制（摇杆 + 射击）──
+// 注意：事件绑定在 canvas 上，不会拦截 overlay 按钮
+
+canvas.addEventListener('touchstart', function(e) {
+  e.preventDefault();
+  if (state !== 'play') return;
+  for (var i = 0; i < e.touches.length; i++) {
+    var t = e.touches[i];
+    if (t.clientX < screenW * 0.4 && t.clientY > screenH * 0.5) {
+      var dx = t.clientX - joystick.cx;
+      var dy = t.clientY - joystick.cy;
+      if (M.hypot(dx, dy) < joystick.r * 1.5) {
+        joystick.active = true;
+        joystick.dx = dx;
+        joystick.dy = dy;
+      }
+    } else {
+      mouseShoot = true;
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', function(e) {
+  e.preventDefault();
+  if (state !== 'play') return;
+  var hasL = false, hasR = false;
+  for (var i = 0; i < e.touches.length; i++) {
+    var t = e.touches[i];
+    if (t.clientX < screenW * 0.4 && t.clientY > screenH * 0.5) {
+      var dx = t.clientX - joystick.cx;
+      var dy = t.clientY - joystick.cy;
+      if (M.hypot(dx, dy) < joystick.r * 1.5) {
+        hasL = true;
+        joystick.dx = dx;
+        joystick.dy = dy;
+      }
+    } else {
+      hasR = true;
+    }
+  }
+  if (!hasL) joystick.active = false;
+  mouseShoot = hasR;
+}, { passive: false });
+
+canvas.addEventListener('touchend', function(e) {
+  var hasL = false, hasR = false;
+  for (var i = 0; i < e.touches.length; i++) {
+    if (e.touches[i].clientX < screenW * 0.4 && e.touches[i].clientY > screenH * 0.5) hasL = true;
+    else hasR = true;
+  }
+  if (!hasL) joystick.active = false;
+  mouseShoot = hasR;
+});
+
+// ── 桌面鼠标 ──
+canvas.addEventListener('mousemove', function(e) {
+  if (state === 'play' && e.clientX < screenW * 0.4) {
+    var dx = e.clientX - joystick.cx;
+    var dy = e.clientY - joystick.cy;
+    if (M.hypot(dx, dy) < joystick.r * 1.5) {
+      joystick.active = true;
+      joystick.dx = dx;
+      joystick.dy = dy;
+    }
+  }
+});
+canvas.addEventListener('mousedown', function(e) {
+  if (state === 'play' && e.clientX >= screenW * 0.4) mouseShoot = true;
+});
+canvas.addEventListener('mouseup', function() {
+  mouseShoot = false;
+  joystick.active = false;
+});
 </script>
 </body>
 </html>
