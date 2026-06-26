@@ -855,26 +855,20 @@ function render() {
   for (var i = 0; i < comets.length; i++) {
     var cm = comets[i];
     var cs = w2s(cm.pos.x, cm.pos.y);
-    var ca = M.atan2(cm.vy, cm.vx);
-    ctx.save();
-    ctx.translate(cs.x, cs.y);
-    ctx.rotate(ca);
-    var tl = ctx.createLinearGradient(-30, 0, -cm.radius, 0);
-    tl.addColorStop(0, 'rgba(255,200,100,0)');
-    tl.addColorStop(0.5, 'rgba(255,150,50,0.6)');
-    tl.addColorStop(1, 'rgba(255,200,80,1)');
-    ctx.fillStyle = tl;
-    ctx.beginPath();
-    ctx.moveTo(-cm.radius, 0);
-    ctx.lineTo(-35, -cm.radius * 0.4);
-    ctx.lineTo(-35,  cm.radius * 0.4);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(0, 0, cm.radius * 0.6, 0, M.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    if (images.comet) {
+      var ca = M.atan2(cm.vy, cm.vx);
+      ctx.save();
+      ctx.translate(cs.x, cs.y);
+      ctx.rotate(ca + M.PI / 2);
+      ctx.drawImage(images.comet, -25, -30, 50, 55);
+      ctx.restore();
+    } else {
+      // fallback
+      ctx.fillStyle = '#fa3';
+      ctx.beginPath();
+      ctx.arc(cs.x, cs.y, cm.radius, 0, M.PI * 2);
+      ctx.fill();
+    }
   }
 
   // ── 能量包 ──
@@ -1090,7 +1084,7 @@ resize();
 window.addEventListener('resize', resize);
 
 // ── 加载图片 ──
-var imgList = { p: '主角.png', m: '大地图.jpg', r: '红色外星人.png', g: '绿色外星人.png', prince: '小王子.png', flower: '小花.png', bolt: '闪电.png', pack: '能量包.png' };
+var imgList = { p: '主角.png', m: '大地图.jpg', r: '红色外星人.png', g: '绿色外星人.png', prince: '小王子.png', flower: '小花.png', bolt: '闪电.png', pack: '能量包.png', comet: '陨石.png' };
 var imgKeys = Object.keys(imgList);
 var imgLoaded = 0;
 
