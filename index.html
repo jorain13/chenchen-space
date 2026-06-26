@@ -1023,14 +1023,13 @@ function render() {
       ctx.drawImage(images.prince, -22, -55, 44, 55);
       ctx.restore();
       // 公主：首次王子到位后1.5x速赶来，之后一起出发
-      if (princessActive && images.princess) {
+      // 公主
+      if (princessActive) {
         var pssX, pssY, pssAlpha = 1;
         if (plantedFlowers.length > 1) {
-          // 后续关卡：公主和王子一起从起点出发，挨在一起
           pssX = (fwx + 85) + (prX + 22 - (fwx + 85)) * walkProgress;
           pssY = (fwy - 15) + (prY - (fwy - 15)) * walkProgress;
         } else {
-          // 首次：王子到位后公主1.5x速从右侧赶来
           var pssProgress = M.min(1, M.max(0, walkProgress - 0.7) / 0.3 * 1.5);
           pssX = (fwx + 85) + (prX + 22 - (fwx + 85)) * pssProgress;
           pssY = (fwy - 15) + (prY - (fwy - 15)) * pssProgress;
@@ -1039,7 +1038,12 @@ function render() {
         if (pssAlpha > 0) {
           ctx.globalAlpha = M.min(1, pssAlpha) * pa;
           ctx.save(); ctx.translate(pssX, pssY);
-          ctx.drawImage(images.princess, -30, -60, 60, 65);
+          if (images.princess) {
+            ctx.drawImage(images.princess, -30, -60, 60, 65);
+          } else {
+            ctx.fillStyle = '#f9c';
+            ctx.beginPath(); ctx.arc(0, -25, 20, 0, M.PI*2); ctx.fill();
+          }
           ctx.restore();
         }
       }
