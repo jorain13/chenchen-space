@@ -963,21 +963,21 @@ function render() {
 
   if (state === 'countdown') {
     var el = Date.now() - princeTimer;
-    var nextAngle = ARC_BOTTOM + plantedFlowers.length * ARC_STEP;
-    var walkDuration = CFG.COUNTDOWN_SEC * 1000 - 3000; // 走到最后3秒
+    var nextAngle = ARC_RIGHT + plantedFlowers.length * ARC_STEP;
+    var fwx = fp.x + M.sin(nextAngle) * pr2;
+    var fwy = fp.y - M.cos(nextAngle) * pr2;
+    var walkDuration = CFG.COUNTDOWN_SEC * 1000 - 3000;
     var walkProgress = princePhase === 0 ? M.min(1, el / walkDuration) : 1;
-    walkProgress = 1 - M.pow(1 - walkProgress, 3); // 慢走缓动
-    var curAngle = ARC_RIGHT + (nextAngle - ARC_RIGHT) * walkProgress;
-    var prX = fp.x + M.sin(curAngle) * pr2;
-    var prY = fp.y - M.cos(curAngle) * pr2;
+    walkProgress = 1 - M.pow(1 - walkProgress, 3);
+    // 王子从右侧直线慢走到花的位置
+    var prX = (fwx + 55) + (fwx - (fwx + 55)) * walkProgress;
+    var prY = (fwy - 15) + (fwy - (fwy - 15)) * walkProgress;
 
     if (princePhase >= 1 && images.flower) {
       var plantStart = CFG.COUNTDOWN_SEC * 1000 - 3000;
       var fa2 = M.min(1, (el - plantStart) / 2000);
       ctx.globalAlpha = fa2;
-      var nfx = fp.x + M.sin(nextAngle) * pr2;
-      var nfy = fp.y - M.cos(nextAngle) * pr2;
-      ctx.save(); ctx.translate(nfx, nfy); ctx.rotate(nextAngle);
+      ctx.save(); ctx.translate(fwx, fwy); ctx.rotate(nextAngle);
       ctx.drawImage(images.flower, -10, -14, 20, 22);
       ctx.restore();
       ctx.globalAlpha = 1;
@@ -987,7 +987,7 @@ function render() {
       var fadeStart = CFG.COUNTDOWN_SEC * 1000 - 1000;
       var pa = el < fadeStart ? 1 : M.max(0, 1 - (el - fadeStart) / 1000);
       ctx.globalAlpha = pa;
-      ctx.save(); ctx.translate(prX, prY); ctx.rotate(curAngle);
+      ctx.save(); ctx.translate(prX, prY);
       ctx.drawImage(images.prince, -22, -55, 44, 55);
       ctx.restore();
       ctx.globalAlpha = 1;
