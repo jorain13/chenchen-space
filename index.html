@@ -703,12 +703,12 @@ function update(dt) {
     g.pos.x = clamp(g.pos.x, 35, CFG.WORLD_W - 35);
     g.pos.y = clamp(g.pos.y, 35, CFG.WORLD_H - 35);
 
-    // 绿色外星人投掷能量包
-    if (dist(g.pos, player) < 160 && M.random() < 0.006 * (dt / 16)) {
+    // 绿色外星人投掷能量包或闪电
+    if (dist(g.pos, player) < 160 && M.random() < 0.008 * (dt / 16)) {
       pickups.push({
         pos: { x: g.pos.x, y: g.pos.y },
-        type: 'ammo',
-        life: 600,
+        type: M.random() < 0.5 ? 'ammo' : 'boost',
+        life: 700,
         vy: -0.5
       });
       var ep = spawnAtEdge();
@@ -1016,30 +1016,36 @@ function render() {
     var bob = M.sin(pk.life * 0.1) * 6;
     var py = ps.y + bob;
     if (pk.type === 'boost') {
+      // 闪电 — 金黄色发光
+      var glow = ctx.createRadialGradient(ps.x, py, 4, ps.x, py, 24);
+      glow.addColorStop(0, 'rgba(255,220,50,0.8)');
+      glow.addColorStop(1, 'rgba(255,150,0,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(ps.x, py, 24, 0, M.PI*2); ctx.fill();
       if (images.bolt) {
-        ctx.drawImage(images.bolt, ps.x - 16, py - 16, 32, 32);
+        ctx.drawImage(images.bolt, ps.x - 20, py - 20, 40, 40);
       } else {
         ctx.fillStyle = '#fd0';
-        ctx.beginPath();
-        ctx.arc(ps.x, py, 14, 0, M.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(ps.x, py, 16, 0, M.PI*2); ctx.fill();
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 16px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('⚡', ps.x, py + 5);
+        ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('⚡', ps.x, py + 6);
       }
     } else {
+      // 能量包 — 绿色发光
+      var glow2 = ctx.createRadialGradient(ps.x, py, 4, ps.x, py, 24);
+      glow2.addColorStop(0, 'rgba(50,255,100,0.7)');
+      glow2.addColorStop(1, 'rgba(0,200,50,0)');
+      ctx.fillStyle = glow2;
+      ctx.beginPath(); ctx.arc(ps.x, py, 24, 0, M.PI*2); ctx.fill();
       if (images.pack) {
-        ctx.drawImage(images.pack, ps.x - 20, py - 20, 40, 40);
+        ctx.drawImage(images.pack, ps.x - 22, py - 22, 44, 44);
       } else {
         ctx.fillStyle = '#4f8';
-        ctx.beginPath();
-        ctx.arc(ps.x, py, 12, 0, M.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(ps.x, py, 14, 0, M.PI*2); ctx.fill();
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 14px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('🔫', ps.x, py + 4);
+        ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('🔫', ps.x, py + 5);
       }
     }
   }
