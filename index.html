@@ -785,18 +785,22 @@ function render() {
   // ── 小王子场景 ──
   if (state === 'prince') {
     var elapsed = Date.now() - princeTimer;
-    var t = elapsed / 1000;
+    var pr = flowerPlanet.r;
 
-    // 王子站在星球表面的目标位置
-    var princeEndX = fp.x - flowerPlanet.r + 8;
-
-    // 阶段0：从右侧走出来 (0-1000ms)
+    // 王子沿星球弧线走动：角度从右侧(40°)走到左侧(-15°)
+    var startAngle =  40 * M.PI / 180;
+    var endAngle   = -15 * M.PI / 180;
     var walkProgress = princePhase === 0 ? M.min(1, elapsed / 1000) : 1;
-    var princeX = fp.x + 50 + (princeEndX - (fp.x + 50)) * walkProgress;
-    var princeY = surfaceY; // 脚精确站在星球表面
+    // ease-out
+    walkProgress = 1 - M.pow(1 - walkProgress, 2);
+    var curAngle = startAngle + (endAngle - startAngle) * walkProgress;
 
-    // 新花朵位置
-    var newFlowerX = fp.x - flowerPlanet.r + 12 + plantedFlowers.length * 16;
+    // 弧线上位置：星球中心 + 半径偏移
+    var princeX = fp.x + M.sin(curAngle) * pr;
+    var princeY = fp.y - M.cos(curAngle) * pr;
+
+    // 新花朵位置（星球表面偏左）
+    var newFlowerX = fp.x - pr + 12 + plantedFlowers.length * 16;
 
     if (princePhase >= 1 && images.flower) {
       // 阶段1和2：新花朵出现并保留
@@ -815,7 +819,8 @@ function render() {
       ctx.globalAlpha = princeAlpha;
       ctx.save();
       ctx.translate(princeX, princeY);
-      // 脚在 translate 原点，身体在上方
+      // 身体沿径向站立（脚朝星球中心，头朝外）
+      ctx.rotate(curAngle);
       ctx.drawImage(images.prince, -22, -55, 44, 55);
       ctx.restore();
       ctx.globalAlpha = 1;
@@ -826,7 +831,7 @@ function render() {
     ctx.font = 'bold 13px sans-serif';
     ctx.textAlign = 'center';
     var msg = princePhase === 0 ? '🌹 小王子来了！' : princePhase === 1 ? '🌸 种下第' + (plantedFlowers.length + 1) + '朵小花' : '✨';
-    ctx.fillText(msg, fp.x, fp.y - flowerPlanet.r - 55);
+    ctx.fillText(msg, fp.x, fp.y - pr - 55);
   }
 
   // ── 宇宙垃圾 ──
