@@ -83,8 +83,8 @@ var CFG = {
   // ── 小星星 ──
   STAR_SCORES: [50, 100, 300, 500],      // 等级1-4 分值
   STAR_SPEEDS: [0.6, 1.2, 2.0, 3.0],    // 等级1-4 飞行速度
-  STAR_SPAWN_MIN: 2000,                   // 刷新间隔 ms
-  STAR_SPAWN_MAX: 5000,
+  STAR_SPAWN_MIN: 800,                    // 刷新间隔 ms
+  STAR_SPAWN_MAX: 2500,
   STAR_RATIO: [0.45, 0.30, 0.18, 0.07],  // 比例(低等级多)
   STAR_BASE: 20,                          // 第1关总数
   STAR_SCALE: 5,                          // 每关+5
@@ -160,7 +160,6 @@ var player = null;
 var redAliens   = [];
 var greenAliens = [];
 var spaceJunk   = [];
-var comets      = [];
 var bullets     = [];
 var enemyBullets = [];
 var pickups     = [];
@@ -192,7 +191,6 @@ var shakeAmt = 0;
 var nextPickupTimer = 0;
 var ammoSpawned = 0;       // 本关已生成能量包数
 var boostSpawned = 0;      // 本关已生成闪电数
-var nextCometTimer  = 0;
 var nextStoneTimer  = 0;
 
 // ── 地球 & 行星（固定位置）──
@@ -279,21 +277,6 @@ function spawnStar() {
   });
 }
 
-function spawnComet() {
-  var s = M.floor(M.random() * 4), x, y, dir;
-  if      (s === 0) { x = rand(0, CFG.WORLD_W); y = -30;          dir = rand(M.PI * 0.3, M.PI * 0.7); }
-  else if (s === 1) { x = rand(0, CFG.WORLD_W); y = CFG.WORLD_H + 30; dir = rand(-M.PI * 0.7, -M.PI * 0.3); }
-  else if (s === 2) { x = -30; y = rand(0, CFG.WORLD_H);          dir = rand(-M.PI * 0.3, M.PI * 0.3); }
-  else              { x = CFG.WORLD_W + 30; y = rand(0, CFG.WORLD_H); dir = rand(M.PI * 0.7, M.PI * 1.3); }
-  comets.push({
-    pos: { x: x, y: y },
-    vx: M.cos(dir) * rand(2, 4),
-    vy: M.sin(dir) * rand(2, 4),
-    radius: rand(18, 30),
-    life: 300
-  });
-}
-
 // ============================================================
 //  🎯 关卡管理
 // ============================================================
@@ -323,7 +306,6 @@ function initLevel(lv) {
   }
 
   // 清空其他
-  comets = [];
   bullets = [];
   enemyBullets = [];
   pickups = [];
@@ -335,7 +317,6 @@ function initLevel(lv) {
   ammoSpawned = 0;
   boostSpawned = 0;
   nextPickupTimer = Date.now() + rand(2000, 4000);
-  nextCometTimer  = Date.now() + rand(4000, 8000);
   // 星星刷新
   nextStoneTimer  = Date.now() + rand(CFG.STAR_SPAWN_MIN, CFG.STAR_SPAWN_MAX);
 
@@ -584,10 +565,6 @@ function update(dt) {
   for (var i = 0; i < spaceJunk.length; i++) {
     if (dist(player, spaceJunk[i].pos) < spaceJunk[i].radius + 14) { gameOver('撞到太空垃圾'); return; }
   }
-  for (var i = comets.length - 1; i >= 0; i--) {
-    if (dist(player, comets[i].pos) < comets[i].radius + 16) { gameOver('被陨石撞毁'); return; }
-  }
-
   // ── 玩家子弹 ──
   for (var i = bullets.length - 1; i >= 0; i--) {
     var b = bullets[i];
@@ -797,6 +774,7 @@ function update(dt) {
   var starQuota = CFG.STAR_BASE + (level - 1) * CFG.STAR_SCALE;
   if (now > nextStoneTimer && stars.length < starQuota) {
     spawnStar();
+    if (stars.length < starQuota) spawnStar(); // 每次生成2颗加速填充
     nextStoneTimer = now + rand(CFG.STAR_SPAWN_MIN, CFG.STAR_SPAWN_MAX);
   }
 
@@ -819,23 +797,6 @@ function update(dt) {
       spawnParticles(st.pos.x, st.pos.y, '#ff0', 8);
       stars.splice(i, 1);
       updateHUD();
-    }
-  }
-
-  // ── 陨石（第1关起，随关卡增多）──
-  if (now > nextCometTimer) {
-    var ct = 1 + M.floor(level / 2);  // 第1关=1, 第3关=2, 第5关=3...
-    if (comets.length < ct) spawnComet();
-    nextCometTimer = now + rand(2000, 5000);
-  }
-  for (var i = comets.length - 1; i >= 0; i--) {
-    var cm = comets[i];
-    cm.pos.x += cm.vx * (dt / 16);
-    cm.pos.y += cm.vy * (dt / 16);
-    cm.life--;
-    if (cm.life <= 0 || cm.pos.x < -100 || cm.pos.x > CFG.WORLD_W + 100 ||
-        cm.pos.y < -100 || cm.pos.y > CFG.WORLD_H + 100) {
-      comets.splice(i, 1);
     }
   }
 
@@ -1018,26 +979,6 @@ function render() {
       ctx.fillStyle = sc[st.tier];
       ctx.beginPath();
       ctx.arc(sts.x, sts.y, 14, 0, M.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  // ── 陨石 ──
-  for (var i = 0; i < comets.length; i++) {
-    var cm = comets[i];
-    var cs = w2s(cm.pos.x, cm.pos.y);
-    if (images.comet) {
-      var ca = M.atan2(cm.vy, cm.vx);
-      ctx.save();
-      ctx.translate(cs.x, cs.y);
-      ctx.rotate(ca + M.PI / 2);
-      ctx.drawImage(images.comet, -25, -30, 50, 55);
-      ctx.restore();
-    } else {
-      // fallback
-      ctx.fillStyle = '#fa3';
-      ctx.beginPath();
-      ctx.arc(cs.x, cs.y, cm.radius, 0, M.PI * 2);
       ctx.fill();
     }
   }
@@ -1329,7 +1270,7 @@ resize();
 window.addEventListener('resize', resize);
 
 // ── 加载图片 ──
-var imgList = { p: '主角.png', m: '大地图.jpg', r: '红色外星人.png', g: '绿色外星人.png', prince: '小王子.png', flower: '小花.png', bolt: '闪电.png', pack: '能量包.png', comet: '陨石.png', star0: '等级1小星星.png', star1: '等级2小星星.png', star2: '等级3小星星.png', star3: '等级4小星星.png' };
+var imgList = { p: '主角.png', m: '大地图.jpg', r: '红色外星人.png', g: '绿色外星人.png', prince: '小王子.png', flower: '小花.png', bolt: '闪电.png', pack: '能量包.png', star0: '等级1小星星.png', star1: '等级2小星星.png', star2: '等级3小星星.png', star3: '等级4小星星.png' };
 var imgKeys = Object.keys(imgList);
 var imgLoaded = 0;
 
