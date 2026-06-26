@@ -398,9 +398,9 @@ function updateArm(dt) {
       armLength = CFG.ARM_MAX_LEN;
       armState = 'retracting';
     }
-    // 检测碰到星星（从鼻尖算起）
-    var tipX = player.x + M.cos(armAngle) * (armLength + 22);
-    var tipY = player.y + M.sin(armAngle) * (armLength + 22);
+    // 检测碰到星星（从火箭顶端算起）
+    var tipX = player.x + M.cos(armAngle) * (armLength + 50);
+    var tipY = player.y + M.sin(armAngle) * (armLength + 50);
     for (var i = stars.length - 1; i >= 0; i--) {
       if (dist({ x: tipX, y: tipY }, stars[i].pos) < 26) {
         armGrabbed = stars[i];
@@ -1129,9 +1129,9 @@ function render() {
   // ── 机械臂 ──
   if (armState !== 'idle' && player) {
     var ps2 = w2s(player.x, player.y);
-    // 从火箭鼻尖沿轴线伸出
-    var noseX = ps2.x + M.cos(armAngle) * 22;
-    var noseY = ps2.y + M.sin(armAngle) * 22;
+    // 从火箭顶端（整流罩）沿轴线伸出
+    var noseX = ps2.x + M.cos(armAngle) * 50;
+    var noseY = ps2.y + M.sin(armAngle) * 50;
     var tipX = noseX + M.cos(armAngle) * armLength;
     var tipY = noseY + M.sin(armAngle) * armLength;
 
@@ -1169,8 +1169,8 @@ function render() {
 
     // 抓到星星时拖拽显示
     if (armGrabbed !== null && stars.indexOf(armGrabbed) >= 0) {
-      armGrabbed.pos.x = player.x + M.cos(armAngle) * (armLength + 22);
-      armGrabbed.pos.y = player.y + M.sin(armAngle) * (armLength + 22);
+      armGrabbed.pos.x = player.x + M.cos(armAngle) * (armLength + 50);
+      armGrabbed.pos.y = player.y + M.sin(armAngle) * (armLength + 50);
     }
   }
 
