@@ -80,13 +80,13 @@ var CFG = {
   // ── 地球回血 ──
   HEAL_RATE: 10,              // HP per second
 
-  // ── 彩色陨石（可触碰+机械臂抓取）──
-  METEOR_SCORES: [50, 100, 300],      // 红/蓝/金 分值
-  METEOR_BASE: 20,                    // 第1关总数
-  METEOR_SCALE: 4,                    // 每关+4颗
-  METEOR_RATIO: [0.60, 0.30, 0.10],  // 红/蓝/金 比例
-  METEOR_SPAWN_MIN: 2500,             // 刷新间隔 ms
-  METEOR_SPAWN_MAX: 6000,
+  // ── 小星星 ──
+  STAR_SCORES: [50, 100, 300, 500],      // 等级1-4 分值
+  STAR_SPEEDS: [0.6, 1.2, 2.0, 3.0],    // 等级1-4 飞行速度
+  STAR_SPAWN_MIN: 2000,                   // 刷新间隔 ms
+  STAR_SPAWN_MAX: 5000,
+  STAR_RATIO: [0.45, 0.30, 0.18, 0.07],  // 比例(低等级多)
+  COUNTDOWN_SEC: 10,                      // 通关倒计时
 
   // ── 机械臂 ──
   ARM_MAX_LEN: 100,                   // 最大伸出 = 火箭高度
@@ -162,17 +162,16 @@ var comets      = [];
 var bullets     = [];
 var enemyBullets = [];
 var pickups     = [];
-var meteors    = [];   // 彩色陨石（可抓可取）
+var stars      = [];   // 小星星（可触碰+机械臂抓取）
 var floatingTxt  = [];
 var particles   = [];
 
 var camera  = { x: 0, y: 0 };
 var lastFrame = 0;
 var lastShot  = 0;
-var state     = 'title';   // 'title' | 'play' | 'over' | 'prince'
-var princePhase = 0;       // 小王子动画阶段
-var princeTimer = 0;       // 动画计时器
-var plantedFlowers = [];   // 永久种植的小花 [{level}]
+var state     = 'title';   // 'title' | 'play' | 'over' | 'countdown'
+var countdownStart = 0;    // 倒计时开始时间
+var plantedFlowers = [];   // 保留：小花数组（暂存）
 var level     = 1;
 var score     = 0;
 var mouseShoot = false;
@@ -255,16 +254,24 @@ function spawnSpaceJunk(junkSpeed) {
   };
 }
 
-function spawnMeteor() {
-  // 红60% 蓝30% 金10%
-  var roll = M.random();
-  var tier = roll < CFG.METEOR_RATIO[0] ? 0 : roll < CFG.METEOR_RATIO[0] + CFG.METEOR_RATIO[1] ? 1 : 2;
-  meteors.push({
-    pos: { x: rand(60, CFG.WORLD_W - 60), y: rand(60, CFG.WORLD_H - 60) },
+function spawnStar() {
+  // 按比例分配等级：45%/30%/18%/7%
+  var roll = M.random(), tier = 0, acc = 0;
+  for (var t = 0; t < 4; t++) { acc += CFG.STAR_RATIO[t]; if (roll < acc) { tier = t; break; } }
+  // 从屏幕边缘刷新
+  var s = M.floor(M.random() * 4), x, y, dir;
+  var m = 30;
+  if (s === 0)      { x = rand(m, CFG.WORLD_W - m); y = -m; dir = M.PI / 2; }
+  else if (s === 1) { x = rand(m, CFG.WORLD_W - m); y = CFG.WORLD_H + m; dir = -M.PI / 2; }
+  else if (s === 2) { x = -m; y = rand(m, CFG.WORLD_H - m); dir = 0; }
+  else              { x = CFG.WORLD_W + m; y = rand(m, CFG.WORLD_H - m); dir = M.PI; }
+  var spd = CFG.STAR_SPEEDS[tier] * rand(0.8, 1.2);
+  stars.push({
+    pos: { x: x, y: y },
+    vx: M.cos(dir) * spd,
+    vy: M.sin(dir) * spd,
     tier: tier,
-    life: 600,
-    vy: -0.15,
-    bob: rand(0, M.PI * 2)
+    life: 900
   });
 }
 
@@ -316,7 +323,7 @@ function initLevel(lv) {
   bullets = [];
   enemyBullets = [];
   pickups = [];
-  meteors = [];
+  stars = [];
   floatingTxt = [];
   particles = [];
 
@@ -325,8 +332,8 @@ function initLevel(lv) {
   boostSpawned = 0;
   nextPickupTimer = Date.now() + rand(2000, 4000);
   nextCometTimer  = Date.now() + rand(4000, 8000);
-  // 陨石：关卡越高越多
-  nextStoneTimer  = Date.now() + rand(CFG.METEOR_SPAWN_MIN, CFG.METEOR_SPAWN_MAX);
+  // 星星刷新
+  nextStoneTimer  = Date.now() + rand(CFG.STAR_SPAWN_MIN, CFG.STAR_SPAWN_MAX);
 
   updateHUD();
 }
@@ -356,6 +363,7 @@ function startGame() {
   level = 1;
   state = 'play';
   plantedFlowers = [];
+  countdownStart = 0;
   gameTime = 0;
   shakeAmt = 0;
   ammoSpawned = 0; boostSpawned = 0;
@@ -378,10 +386,9 @@ function gameOver(reason) {
 }
 
 function levelWin() {
-  // 触发小王子场景
-  state = 'prince';
-  princePhase = 0;
-  princeTimer = Date.now();
+  // 击杀全部红色外星人 → 倒计时10s
+  state = 'countdown';
+  countdownStart = Date.now();
 }
 
 function deployArm() {
@@ -405,13 +412,13 @@ function updateArm(dt) {
       armLength = CFG.ARM_MAX_LEN;
       armState = 'retracting';
     }
-    // 检测碰到陨石
+    // 检测碰到星星
     var tipX = player.x + M.cos(armAngle) * armLength;
     var tipY = player.y + M.sin(armAngle) * armLength;
-    for (var i = meteors.length - 1; i >= 0; i--) {
-      if (dist({ x: tipX, y: tipY }, meteors[i].pos) < 26) {
-        armGrabbed = meteors[i];
-        armSlow = CFG.ARM_SLOW[armGrabbed.tier];
+    for (var i = stars.length - 1; i >= 0; i--) {
+      if (dist({ x: tipX, y: tipY }, stars[i].pos) < 26) {
+        armGrabbed = stars[i];
+        armSlow = CFG.ARM_SLOW[M.min(armGrabbed.tier, 2)]; // clamp to 0-2
         armState = 'retracting';
         break;
       }
@@ -421,13 +428,13 @@ function updateArm(dt) {
     armLength = M.max(0, armLength - retractSpd);
     if (armLength <= 2) {
       if (armGrabbed !== null) {
-        var idx = meteors.indexOf(armGrabbed);
+        var idx = stars.indexOf(armGrabbed);
         if (idx >= 0) {
-          var pts = CFG.METEOR_SCORES[armGrabbed.tier];
+          var pts = CFG.STAR_SCORES[armGrabbed.tier];
           score += pts;
           floatingTxt.push({ x: armGrabbed.pos.x, y: armGrabbed.pos.y, text: '+' + pts, life: 60, vy: -2 });
           spawnParticles(armGrabbed.pos.x, armGrabbed.pos.y, '#ff0', 8);
-          meteors.splice(idx, 1);
+          stars.splice(idx, 1);
           updateHUD();
         }
       }
@@ -440,8 +447,9 @@ function updateArm(dt) {
 }
 
 function updateHUD() {
-  if (state === 'prince') {
-    document.getElementById('info').textContent = '🌸 第' + level + '关 通过！';
+  if (state === 'countdown') {
+    var remain = M.max(0, M.ceil((CFG.COUNTDOWN_SEC * 1000 - (Date.now() - countdownStart)) / 1000));
+    document.getElementById('info').textContent = '⏳ 通关！' + remain + 's';
     return;
   }
   if (!player) return;
@@ -500,17 +508,10 @@ function playerFire(now, force) {
 // ============================================================
 
 function update(dt) {
-  if (state === 'prince') {
-    // 小王子动画计时
-    // 阶段0(0-1000): 从右侧走出  阶段1(1000-2500): 种花  阶段2(2500-3500): 王子消失
-    var elapsed = Date.now() - princeTimer;
-    if (elapsed < 1000) princePhase = 0;
-    else if (elapsed < 2500) princePhase = 1;
-    else princePhase = 2;
-
-    if (elapsed > 3500) {
-      // 永久种植小花
-      plantedFlowers.push(level);
+  if (state === 'countdown') {
+    // 倒计时结束 → 下一关
+    if (Date.now() - countdownStart > CFG.COUNTDOWN_SEC * 1000) {
+      plantedFlowers.push(level); // 保留计数
       level++;
       player.hp   = M.min(CFG.PLAYER_HP, player.hp + 30);
       player.ammo = M.min(CFG.PLAYER_AMMO, player.ammo + 30);
@@ -524,9 +525,9 @@ function update(dt) {
       state = 'play';
       updateHUD();
     }
-    return;
+    // 倒计时期间仍可移动和拾取星星
   }
-  if (state !== 'play') return;
+  if (state !== 'play' && state !== 'countdown') return;
   var now = Date.now();
   gameTime += dt;
   if (shakeAmt > 0) shakeAmt = M.max(0, shakeAmt - dt / 200);
@@ -782,29 +783,31 @@ function update(dt) {
     j.rotation += j.rotSpeed * (dt / 16);
   }
 
-  // ── 陨石刷新（每关总数递增，保持场上有足够陨石）──
-  var totalMeteors = CFG.METEOR_BASE + (level - 1) * CFG.METEOR_SCALE;
+  // ── 小星星刷新（从边缘直线飞行）──
   if (now > nextStoneTimer) {
-    if (meteors.length < totalMeteors) spawnMeteor();
-    nextStoneTimer = now + rand(CFG.METEOR_SPAWN_MIN, CFG.METEOR_SPAWN_MAX);
+    spawnStar();
+    nextStoneTimer = now + rand(CFG.STAR_SPAWN_MIN, CFG.STAR_SPAWN_MAX);
   }
 
-  // ── 拾取陨石（碰到不死的，机械臂也可抓）──
-  for (var i = meteors.length - 1; i >= 0; i--) {
-    var mt = meteors[i];
-    mt.pos.y += mt.vy * (dt / 16);
-    mt.life--;
-    if (dist(mt.pos, player) < 28) {
-      var pts2 = CFG.METEOR_SCORES[mt.tier];
-      score += pts2;
-      floatingTxt.push({ x: mt.pos.x, y: mt.pos.y, text: '+' + pts2, life: 60, vy: -2 });
-      spawnParticles(mt.pos.x, mt.pos.y, '#ff0', 8);
-      meteors.splice(i, 1);
-      updateHUD();
+  // ── 星星移动 & 拾取 ──
+  for (var i = stars.length - 1; i >= 0; i--) {
+    var st = stars[i];
+    st.pos.x += st.vx * (dt / 16);
+    st.pos.y += st.vy * (dt / 16);
+    st.life--;
+    // 超出世界边界即移除
+    if (st.life <= 0 || st.pos.x < -80 || st.pos.x > CFG.WORLD_W + 80 || st.pos.y < -80 || st.pos.y > CFG.WORLD_H + 80) {
+      stars.splice(i, 1);
       continue;
     }
-    if (mt.life <= 0 || mt.pos.y > CFG.WORLD_H + 60) {
-      meteors.splice(i, 1);
+    // 碰到火箭
+    if (dist(st.pos, player) < 28) {
+      var pts2 = CFG.STAR_SCORES[st.tier];
+      score += pts2;
+      floatingTxt.push({ x: st.pos.x, y: st.pos.y, text: '+' + pts2, life: 60, vy: -2 });
+      spawnParticles(st.pos.x, st.pos.y, '#ff0', 8);
+      stars.splice(i, 1);
+      updateHUD();
     }
   }
 
@@ -920,69 +923,6 @@ function render() {
     ctx.setLineDash([]);
   }
 
-  // ── 永久种植的小花 + 小王子（右下角黄色大星球弧面）──
-  var flowerPlanet = PLANETS[3];
-  var fp = w2s(flowerPlanet.x, flowerPlanet.y);
-  var pr = flowerPlanet.r;
-  // 弧线范围：右侧50°到左侧-22°（与王子同一条弧线）
-  var ARC_RIGHT  =  50 * M.PI / 180;
-  var ARC_LEFT   = -22 * M.PI / 180;
-  var ARC_STEP   = 14 * M.PI / 180;
-
-  // 已种下的花（沿弧线从左到右）
-  if (images.flower) {
-    for (var fi = 0; fi < plantedFlowers.length; fi++) {
-      var fa = ARC_LEFT + fi * ARC_STEP;
-      var ffx = fp.x + M.sin(fa) * pr;
-      var ffy = fp.y - M.cos(fa) * pr;
-      ctx.save();
-      ctx.translate(ffx, ffy);
-      ctx.rotate(fa);
-      ctx.drawImage(images.flower, -10, -14, 20, 22);
-      ctx.restore();
-    }
-  }
-
-  // 小王子动画
-  if (state === 'prince') {
-    var elapsed = Date.now() - princeTimer;
-    // 下一朵花的目标角度
-    var nextAngle = ARC_LEFT + plantedFlowers.length * ARC_STEP;
-
-    // 王子起点=弧线右侧，终点=下一朵花位置
-    var walkProgress = princePhase === 0 ? M.min(1, elapsed / 1000) : 1;
-    walkProgress = 1 - M.pow(1 - walkProgress, 2);
-    var curAngle = ARC_RIGHT + (nextAngle - ARC_RIGHT) * walkProgress;
-    var princeX = fp.x + M.sin(curAngle) * pr;
-    var princeY = fp.y - M.cos(curAngle) * pr;
-
-    // 新花出现（阶段1和2）
-    if (princePhase >= 1 && images.flower) {
-      var flowerAlpha = princePhase === 2 ? 1 : M.min(1, (elapsed - 1000) / 600);
-      ctx.globalAlpha = flowerAlpha;
-      var nfx = fp.x + M.sin(nextAngle) * pr;
-      var nfy = fp.y - M.cos(nextAngle) * pr;
-      ctx.save();
-      ctx.translate(nfx, nfy);
-      ctx.rotate(nextAngle);
-      ctx.drawImage(images.flower, -10, -14, 20, 22);
-      ctx.restore();
-      ctx.globalAlpha = 1;
-    }
-
-    // 王子可见（阶段0和1）
-    if (princePhase <= 1 && images.prince) {
-      var princeAlpha = princePhase === 0 ? 1 : M.max(0, 1 - (elapsed - 2200) / 300);
-      ctx.globalAlpha = princeAlpha;
-      ctx.save();
-      ctx.translate(princeX, princeY);
-      ctx.rotate(curAngle);
-      ctx.drawImage(images.prince, -22, -55, 44, 55);
-      ctx.restore();
-      ctx.globalAlpha = 1;
-    }
-  }
-
   // ── 宇宙垃圾 ──
   for (var i = 0; i < spaceJunk.length; i++) {
     var jk = spaceJunk[i];
@@ -1006,26 +946,20 @@ function render() {
     ctx.restore();
   }
 
-  // ── 彩色陨石 ──
-  var meteorKeys = ['meteor0', 'meteor1', 'meteor2'];
-  for (var i = 0; i < meteors.length; i++) {
-    var mt = meteors[i];
-    var mts = w2s(mt.pos.x, mt.pos.y);
-    var bob = M.sin(mt.bob + gameTime * 0.03) * 4;
-    if (images[meteorKeys[mt.tier]]) {
-      ctx.drawImage(images[meteorKeys[mt.tier]], mts.x - 22, mts.y + bob - 22, 44, 44);
+  // ── 小星星 ──
+  for (var i = 0; i < stars.length; i++) {
+    var st = stars[i];
+    var sts = w2s(st.pos.x, st.pos.y);
+    var key2 = 'star' + st.tier;
+    if (images[key2]) {
+      ctx.drawImage(images[key2], sts.x - 20, sts.y - 20, 40, 40);
     } else {
-      var mcolors = ['#f44', '#4af', '#fd4'];
-      ctx.fillStyle = mcolors[mt.tier];
+      var sc = ['#ff0', '#fa0', '#f0f', '#0ff'];
+      ctx.fillStyle = sc[st.tier];
       ctx.beginPath();
-      ctx.arc(mts.x, mts.y + bob, 16, 0, M.PI * 2);
+      ctx.arc(sts.x, sts.y, 14, 0, M.PI * 2);
       ctx.fill();
     }
-    // 分数标签
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 9px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('+' + CFG.METEOR_SCORES[mt.tier], mts.x, mts.y + bob - 22);
   }
 
   // ── 陨石 ──
@@ -1229,8 +1163,8 @@ function render() {
     ctx.fill();
     ctx.stroke();
 
-    // 抓到陨石时拖拽显示
-    if (armGrabbed !== null && meteors.indexOf(armGrabbed) >= 0) {
+    // 抓到星星时拖拽显示
+    if (armGrabbed !== null && stars.indexOf(armGrabbed) >= 0) {
       armGrabbed.pos.x = player.x + M.cos(armAngle) * armLength;
       armGrabbed.pos.y = player.y + M.sin(armAngle) * armLength;
     }
@@ -1260,6 +1194,20 @@ function render() {
     ctx.fillText(ft.text, fts.x, fts.y);
   }
   ctx.globalAlpha = 1;
+
+  // ── 倒计时覆盖 ──
+  if (state === 'countdown') {
+    var remain = M.max(0, M.ceil((CFG.COUNTDOWN_SEC * 1000 - (Date.now() - countdownStart)) / 1000));
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(0, 0, screenW, screenH);
+    ctx.fillStyle = '#ff0';
+    ctx.font = 'bold 48px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(remain, screenW / 2, screenH / 2);
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.fillText('通关！继续拾取星星', screenW / 2, screenH / 2 + 40);
+  }
 
   // ── 虚拟摇杆 ──
   ctx.strokeStyle = 'rgba(255,255,255,0.25)';
@@ -1321,7 +1269,7 @@ resize();
 window.addEventListener('resize', resize);
 
 // ── 加载图片 ──
-var imgList = { p: '主角.png', m: '大地图.jpg', r: '红色外星人.png', g: '绿色外星人.png', prince: '小王子.png', flower: '小花.png', bolt: '闪电.png', pack: '能量包.png', comet: '陨石.png', meteor0: '陨石红.png', meteor1: '陨石蓝.png', meteor2: '陨石金.png' };
+var imgList = { p: '主角.png', m: '大地图.jpg', r: '红色外星人.png', g: '绿色外星人.png', prince: '小王子.png', flower: '小花.png', bolt: '闪电.png', pack: '能量包.png', comet: '陨石.png', star0: '等级1小星星.png', star1: '等级2小星星.png', star2: '等级3小星星.png', star3: '等级4小星星.png' };
 var imgKeys = Object.keys(imgList);
 var imgLoaded = 0;
 
@@ -1369,7 +1317,7 @@ try { document.body.scrollIntoView(); } catch(e) {}
 
 canvas.addEventListener('touchstart', function(e) {
   e.preventDefault();
-  if (state !== 'play') return;
+  if (state !== 'play' && state !== 'countdown') return;
   for (var i = 0; i < e.touches.length; i++) {
     var t = e.touches[i];
     if (t.clientX < screenW * 0.45 && t.clientY > screenH * 0.4) {
@@ -1384,7 +1332,7 @@ canvas.addEventListener('touchstart', function(e) {
 
 canvas.addEventListener('touchmove', function(e) {
   e.preventDefault();
-  if (state !== 'play') return;
+  if (state !== 'play' && state !== 'countdown') return;
   var hasL = false, hasR = false;
   for (var i = 0; i < e.touches.length; i++) {
     var t = e.touches[i];
@@ -1412,14 +1360,14 @@ canvas.addEventListener('touchend', function(e) {
 
 // ── 桌面鼠标 ──
 canvas.addEventListener('mousemove', function(e) {
-  if (state === 'play' && e.clientX < screenW * 0.45) {
+  if ((state === 'play' || state === 'countdown') && e.clientX < screenW * 0.45) {
     joystick.active = true;
     joystick.dx = e.clientX - joystick.cx;
     joystick.dy = e.clientY - joystick.cy;
   }
 });
 canvas.addEventListener('mousedown', function(e) {
-  if (state === 'play' && e.clientX >= screenW * 0.45) mouseShoot = true;
+  if ((state === 'play' || state === 'countdown') && e.clientX >= screenW * 0.45) mouseShoot = true;
 });
 canvas.addEventListener('mouseup', function() {
   mouseShoot = false;
