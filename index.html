@@ -381,7 +381,7 @@ function deployArm() {
   if (armState !== 'idle' || !player) return;
   armState = 'extending';
   armLength = 0;
-  armAngle = player.heading;
+  armAngle = 0;
   armGrabbed = null;
   armSlow = 1;
 }
@@ -391,8 +391,8 @@ function updateArm(dt) {
   var spd = CFG.ARM_SPEED * (dt / 16);
 
   if (armState === 'extending') {
-    // 机械臂方向始终跟随火箭头部
-    armAngle = player.heading;
+    // 机械臂始终保持水平方向（0°=右侧）
+    armAngle = 0;
     armLength += spd * 2;
     if (armLength >= CFG.ARM_MAX_LEN) {
       armLength = CFG.ARM_MAX_LEN;
@@ -410,7 +410,7 @@ function updateArm(dt) {
       }
     }
   } else if (armState === 'retracting') {
-    armAngle = player.heading; // 回收时也保持对齐
+    armAngle = 0; // 回收时也保持水平
     var retractSpd = armGrabbed ? spd * (1 - armGrabbed.tier * 0.25) : spd * 3;
     armLength = M.max(0, armLength - retractSpd);
     if (armLength <= 2) {
