@@ -640,8 +640,8 @@ function deactivateButton(type) {
 
 // Touch start
 document.addEventListener('touchstart', (e) => {
-  if (gameState === 'title') {
-    // Allow touch on overlay buttons
+  if (gameState !== 'playing') {
+    // Allow touch on overlay buttons (title, gameover, levelComplete)
     return;
   }
   e.preventDefault();
@@ -694,6 +694,7 @@ document.addEventListener('touchend', (e) => {
 }, { passive: false });
 
 document.addEventListener('touchcancel', (e) => {
+  if (gameState !== 'playing') return;
   for (const touch of e.changedTouches) {
     const type = activeTouches.get(touch.identifier);
     if (type) {
@@ -1440,8 +1441,10 @@ async function init() {
     <h2>加载素材中...</h2>
   `;
 
+  // Load images with timeout fallback
   const loadPromises = Object.entries(ASSET_PATHS).map(([key, path]) => loadImage(key, path));
-  await Promise.all(loadPromises);
+  const timeout = new Promise(resolve => setTimeout(resolve, 8000));
+  await Promise.race([Promise.all(loadPromises), timeout]);
 
   document.getElementById('overlay-content').innerHTML = `
     <h1>🚀 辰辰的宇宙历险记</h1>
@@ -1454,12 +1457,20 @@ async function init() {
       ⚡ 能量包 · +20或+50子弹随机<br>
       💫 小心星球 · 撞击即结束
     </div>
-    <button class="btn btn-primary" onclick="startGame()">🎮 开始游戏</button>
+    <button class="btn btn-primary" id="btn-start">🎮 开始游戏</button>
     <div class="controls-info">
       💻 <kbd>WASD</kbd>移动 &nbsp;<kbd>鼠标</kbd>瞄准 &nbsp;<kbd>点击</kbd>射击<br>
       📱 左侧方向键移动 &nbsp; 右侧按钮射击
     </div>
   `;
+
+  // Use addEventListener for reliability
+  document.getElementById('btn-start').addEventListener('click', startGame);
+  document.getElementById('btn-start').addEventListener('touchend', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    startGame();
+  });
 
   lastTime = performance.now();
   requestAnimationFrame(gameLoop);
