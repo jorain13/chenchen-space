@@ -19,6 +19,8 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1}
 .box p{font-size:14px;color:#9ab;line-height:1.7;margin-bottom:22px}
 #startBtn{display:inline-block;padding:18px 56px;font-size:22px;font-weight:bold;border:none;border-radius:30px;background:linear-gradient(135deg,#f62,#e30);color:#fff;cursor:pointer;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent;position:relative;z-index:9999}
 #startBtn:active{transform:scale(0.94);background:#f00}
+#armBtn{position:fixed;bottom:160px;right:18px;z-index:20;width:56px;height:56px;border-radius:50%;background:rgba(100,100,100,0.6);border:2px solid rgba(200,200,200,0.5);color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#armBtn:active{background:rgba(180,180,180,0.8);border-color:#fff}
 </style>
 </head>
 <body>
@@ -31,6 +33,7 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1}
     <button id="startBtn">🎮 出发！</button>
   </div>
 </div>
+<button id="armBtn">🤖</button>
 
 <script>
 // ============================================================
@@ -83,9 +86,10 @@ var CFG = {
   STONE_SPAWN_MAX: 8000,              // 最长刷新间隔 ms
 
   // ── 机械臂 ──
-  ARM_MAX_LEN: 180,                   // 最大伸出长度
-  ARM_SPEED: 5,                       // 伸缩速度
-  ARM_CLAW_SIZE: 10                   // 抓夹大小
+  ARM_MAX_LEN: 100,                   // 最大伸出 = 火箭高度
+  ARM_SPEED: 4,                       // 伸缩速度
+  ARM_CLAW_SIZE: 10,                  // 抓夹大小
+  ARM_SLOW: [0.7, 0.5, 0.3]          // 抓石后速度倍率 等级1/2/3
 };
 
 // ============================================================
@@ -169,12 +173,11 @@ var plantedFlowers = [];   // 永久种植的小花 [{level}]
 var level     = 1;
 var score     = 0;
 var mouseShoot = false;
-var lastRightTap = 0;        // 右侧双击检测
 var armState    = 'idle';    // 'idle' | 'extending' | 'retracting'
 var armLength   = 0;
 var armAngle    = 0;
-var armGrabbed  = null;      // 抓到的能量石索引
-var tutorialDone = false;
+var armGrabbed  = null;      // 抓到的能量石对象
+var armSlow     = 1;         // 当前速度倍率
 
 var joystick = { cx: 130, cy: 300, r: 90, active: false, dx: 0, dy: 0 };
 var gameTime = 0;
@@ -327,6 +330,7 @@ function initLevel(lv) {
 
 function startGame() {
   document.getElementById('overlay').style.display = 'none';
+  document.getElementById('armBtn').style.display = 'flex';
 
   player = {
     x: CFG.WORLD_W * 0.5, y: CFG.WORLD_H * 0.55,
@@ -347,14 +351,14 @@ function startGame() {
   plantedFlowers = [];
   gameTime = 0;
   shakeAmt = 0;
-  armState = 'idle'; armLength = 0; armGrabbed = null;
-  tutorialDone = false; lastRightTap = 0;
+  armState = 'idle'; armLength = 0; armGrabbed = null; armSlow = 1;
 
   initLevel(1);
 }
 
 function gameOver(reason) {
   state = 'over';
+  document.getElementById('armBtn').style.display = 'none';
   var overlay = document.getElementById('overlay');
   overlay.style.display = 'flex';
   overlay.innerHTML = '<div class="box"><h1>💀 挑战失败</h1><p>' + reason +
@@ -378,6 +382,7 @@ function deployArm() {
   armLength = 0;
   armAngle = player.heading;
   armGrabbed = null;
+  armSlow = 1;
 }
 
 function updateArm(dt) {
@@ -385,33 +390,33 @@ function updateArm(dt) {
   var spd = CFG.ARM_SPEED * (dt / 16);
 
   if (armState === 'extending') {
-    armLength += spd;
+    armLength += spd * 2;
+    if (armLength >= CFG.ARM_MAX_LEN) {
+      armLength = CFG.ARM_MAX_LEN;
+      armState = 'retracting';
+    }
     // 检测碰到能量石
     var tipX = player.x + M.cos(armAngle) * armLength;
     var tipY = player.y + M.sin(armAngle) * armLength;
     for (var i = energyStones.length - 1; i >= 0; i--) {
       if (dist({ x: tipX, y: tipY }, energyStones[i].pos) < 26) {
-        armGrabbed = energyStones[i]; // 对象引用
+        armGrabbed = energyStones[i];
+        armSlow = CFG.ARM_SLOW[armGrabbed.tier]; // 抓石减速
         armState = 'retracting';
         break;
       }
     }
-    if (armLength >= CFG.ARM_MAX_LEN && armState === 'extending') {
-      armState = 'retracting'; // 空手回收
-    }
   } else if (armState === 'retracting') {
-    armLength = M.max(0, armLength - spd * 1.5);
+    var retractSpd = armGrabbed ? spd * (1 - armGrabbed.tier * 0.25) : spd * 3;
+    armLength = M.max(0, armLength - retractSpd);
     if (armLength <= 2) {
-      // 回收完成
       if (armGrabbed !== null) {
-        var es2 = armGrabbed;
-        // 确认石头还在数组中
-        var idx = energyStones.indexOf(es2);
+        var idx = energyStones.indexOf(armGrabbed);
         if (idx >= 0) {
-          var pts = CFG.STONE_SCORES[es2.tier];
+          var pts = CFG.STONE_SCORES[armGrabbed.tier];
           score += pts;
-          floatingTxt.push({ x: es2.pos.x, y: es2.pos.y, text: '+' + pts, life: 60, vy: -2 });
-          spawnParticles(es2.pos.x, es2.pos.y, '#ff0', 8);
+          floatingTxt.push({ x: armGrabbed.pos.x, y: armGrabbed.pos.y, text: '+' + pts, life: 60, vy: -2 });
+          spawnParticles(armGrabbed.pos.x, armGrabbed.pos.y, '#ff0', 8);
           energyStones.splice(idx, 1);
           updateHUD();
         }
@@ -419,6 +424,7 @@ function updateArm(dt) {
       armLength = 0;
       armState = 'idle';
       armGrabbed = null;
+      armSlow = 1;
     }
   }
 }
@@ -503,14 +509,13 @@ function update(dt) {
       player.boostUntil = 0;
       player.bulletSpeed = CFG.BULLET_SPEED_MAX;
       player.rapidFireUntil = 0;
-      armState = 'idle'; armLength = 0; armGrabbed = null;
+      armState = 'idle'; armLength = 0; armGrabbed = null; armSlow = 1;
       initLevel(level);
       state = 'play';
       updateHUD();
     }
     return;
   }
-  if (state === 'tutorial') { updateArm(dt); return; }
   if (state !== 'play') return;
   var now = Date.now();
   gameTime += dt;
@@ -520,8 +525,8 @@ function update(dt) {
   if (joystick.active && (joystick.dx || joystick.dy)) {
     player.heading = M.atan2(joystick.dy, joystick.dx);
   }
-  player.x += M.cos(player.heading) * player.speed * (dt / 16);
-  player.y += M.sin(player.heading) * player.speed * (dt / 16);
+  player.x += M.cos(player.heading) * player.speed * armSlow * (dt / 16);
+  player.y += M.sin(player.heading) * player.speed * armSlow * (dt / 16);
   player.x = clamp(player.x, 25, CFG.WORLD_W - 25);
   player.y = clamp(player.y, 25, CFG.WORLD_H - 25);
 
@@ -766,14 +771,7 @@ function update(dt) {
 
   // ── 能量石刷新（关卡越高越稀有）──
   if (now > nextStoneTimer) {
-    if (energyStones.length < 3) {
-      spawnEnergyStone();
-      // 首次出现教学
-      if (!tutorialDone) {
-        tutorialDone = true;
-        state = 'tutorial';
-      }
-    }
+    if (energyStones.length < 3) spawnEnergyStone();
     nextStoneTimer = now + rand(CFG.STONE_SPAWN_MIN + level * 500, CFG.STONE_SPAWN_MAX + level * 1000);
   }
 
@@ -1243,20 +1241,6 @@ function render() {
   }
   ctx.globalAlpha = 1;
 
-  // ── 教程覆盖 ──
-  if (state === 'tutorial') {
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillRect(0, 0, screenW, screenH);
-    ctx.fillStyle = '#ff0';
-    ctx.font = 'bold 20px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('💎 能量石出现了！', screenW / 2, screenH / 2 - 30);
-    ctx.font = 'bold 16px sans-serif';
-    ctx.fillStyle = '#fff';
-    ctx.fillText('👆 双击右侧屏幕', screenW / 2, screenH / 2 + 10);
-    ctx.fillText('放出机械臂抓取', screenW / 2, screenH / 2 + 36);
-  }
-
   // ── 虚拟摇杆 ──
   ctx.strokeStyle = 'rgba(255,255,255,0.25)';
   ctx.lineWidth = 2;
@@ -1350,6 +1334,13 @@ startBtn.addEventListener('touchstart', function(e) {
   e.preventDefault(); e.stopPropagation();
 });
 
+// ── 机械臂按钮 ──
+var armBtn = document.getElementById('armBtn');
+armBtn.addEventListener('touchstart', function(e) { e.preventDefault(); e.stopPropagation(); deployArm(); });
+armBtn.addEventListener('mousedown', function(e) { e.preventDefault(); e.stopPropagation(); deployArm(); });
+// 初始隐藏，游戏开始后显示
+armBtn.style.display = 'none';
+
 // 防止白边
 try { document.body.scrollIntoView(); } catch(e) {}
 
@@ -1358,7 +1349,7 @@ try { document.body.scrollIntoView(); } catch(e) {}
 
 canvas.addEventListener('touchstart', function(e) {
   e.preventDefault();
-  if (state !== 'play' && state !== 'tutorial') return;
+  if (state !== 'play') return;
   for (var i = 0; i < e.touches.length; i++) {
     var t = e.touches[i];
     if (t.clientX < screenW * 0.45 && t.clientY > screenH * 0.4) {
@@ -1366,14 +1357,6 @@ canvas.addEventListener('touchstart', function(e) {
       joystick.dx = t.clientX - joystick.cx;
       joystick.dy = t.clientY - joystick.cy;
     } else {
-      // 右侧双击 → 放出机械臂
-      var now2 = Date.now();
-      if (now2 - lastRightTap < 350) {
-        deployArm();
-        lastRightTap = 0;
-      } else {
-        lastRightTap = now2;
-      }
       mouseShoot = true;
     }
   }
@@ -1416,12 +1399,7 @@ canvas.addEventListener('mousemove', function(e) {
   }
 });
 canvas.addEventListener('mousedown', function(e) {
-  if ((state === 'play' || state === 'tutorial') && e.clientX >= screenW * 0.4) {
-    var now3 = Date.now();
-    if (now3 - lastRightTap < 350) { deployArm(); lastRightTap = 0; }
-    else { lastRightTap = now3; }
-    mouseShoot = true;
-  }
+  if (state === 'play' && e.clientX >= screenW * 0.4) mouseShoot = true;
 });
 canvas.addEventListener('mouseup', function() {
   mouseShoot = false;
