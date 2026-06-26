@@ -1023,26 +1023,23 @@ function render() {
       ctx.drawImage(images.prince, -22, -55, 44, 55);
       ctx.restore();
       // 公主：首次王子到位后1.5x速赶来，之后一起出发
-      // 公主（plantedFlowers>=0 表示已在种花阶段）
+      // 公主
       if (plantedFlowers.length >= 0) { // TODO: 改回98
-        var pssX, pssY, pssAlpha = 1;
-        if (plantedFlowers.length > 1) {
-          pssX = (fwx + 85) + (prX + 22 - (fwx + 85)) * walkProgress;
-          pssY = (fwy - 15) + (prY - (fwy - 15)) * walkProgress;
-        } else {
+        var pssX = prX + 22, pssY = prY;
+        var pssAlpha = 1;
+        if (plantedFlowers.length === 0) {
           var pssProgress = M.min(1, M.max(0, walkProgress - 0.7) / 0.3 * 1.5);
           pssX = (fwx + 85) + (prX + 22 - (fwx + 85)) * pssProgress;
-          pssY = (fwy - 15) + (prY - (fwy - 15)) * pssProgress;
           pssAlpha = M.min(1, pssProgress * 2);
         }
         if (pssAlpha > 0) {
           ctx.globalAlpha = M.min(1, pssAlpha) * pa;
           ctx.save(); ctx.translate(pssX, pssY);
           if (images.princess) {
-            ctx.drawImage(images.princess, -30, -60, 60, 65);
+            ctx.drawImage(images.princess, -25, -55, 50, 60);
           } else {
-            ctx.fillStyle = '#f9c';
-            ctx.beginPath(); ctx.arc(0, -25, 20, 0, M.PI*2); ctx.fill();
+            ctx.fillStyle = '#f0f';
+            ctx.fillRect(-10, -30, 20, 30);
           }
           ctx.restore();
         }
