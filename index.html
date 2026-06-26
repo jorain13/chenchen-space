@@ -252,7 +252,7 @@ function spawnComet() {
 
 function initLevel(lv) {
   var cfg = levelConfig(lv);
-  var i, edge;
+  var i;
 
   // 红色外星人
   redAliens = [];
@@ -616,7 +616,7 @@ function update(dt) {
     var types = ['boost', 'boost', 'ammo', 'ammo'];
     pickups.push({
       pos: { x: rand(80, CFG.WORLD_W - 80), y: rand(80, CFG.WORLD_H - 80) },
-      type: types[M.floor(M.random() * 3)],
+      type: types[M.floor(M.random() * 4)],
       life: 650,
       vy: -0.3
     });
@@ -767,61 +767,60 @@ function render() {
     ctx.setLineDash([]);
   }
 
-  // ── 永久种植的小花（右下角黄色大星球表面，沿弧线排列）──
+  // ── 永久种植的小花 + 小王子（右下角黄色大星球弧面）──
   var flowerPlanet = PLANETS[3];
   var fp = w2s(flowerPlanet.x, flowerPlanet.y);
   var pr = flowerPlanet.r;
-  // 小花角度：第一朵-22°，之后每朵+14°
-  var flowerStartAngle = -22 * M.PI / 180;
-  var flowerAngleStep  =  14 * M.PI / 180;
+  // 弧线范围：右侧50°到左侧-22°（与王子同一条弧线）
+  var ARC_RIGHT  =  50 * M.PI / 180;
+  var ARC_LEFT   = -22 * M.PI / 180;
+  var ARC_SPAN   = ARC_RIGHT - ARC_LEFT; // 72°
+  // 每朵花在弧线上占据的角度步长
+  var ARC_STEP   = 14 * M.PI / 180;
 
+  // 已种下的花（沿弧线从左到右）
   if (images.flower) {
     for (var fi = 0; fi < plantedFlowers.length; fi++) {
-      var fa = flowerStartAngle + fi * flowerAngleStep;
+      var fa = ARC_LEFT + fi * ARC_STEP;
       var ffx = fp.x + M.sin(fa) * pr;
       var ffy = fp.y - M.cos(fa) * pr;
       ctx.save();
       ctx.translate(ffx, ffy);
-      ctx.rotate(fa); // 花朵沿径向站立
+      ctx.rotate(fa);
       ctx.drawImage(images.flower, -10, -14, 20, 22);
       ctx.restore();
     }
   }
 
-  // ── 小王子场景 ──
+  // 小王子动画
   if (state === 'prince') {
     var elapsed = Date.now() - princeTimer;
+    // 下一朵花的目标角度
+    var nextAngle = ARC_LEFT + plantedFlowers.length * ARC_STEP;
 
-    // 王子从星球右侧(50°)沿弧线走到左侧(-22°)
-    var startAngle =  50 * M.PI / 180;
-    var endAngle   = -22 * M.PI / 180;
+    // 王子起点=弧线右侧，终点=下一朵花位置
     var walkProgress = princePhase === 0 ? M.min(1, elapsed / 1000) : 1;
-    walkProgress = 1 - M.pow(1 - walkProgress, 2); // ease-out
-    var curAngle = startAngle + (endAngle - startAngle) * walkProgress;
-
-    // 弧线上位置
+    walkProgress = 1 - M.pow(1 - walkProgress, 2);
+    var curAngle = ARC_RIGHT + (nextAngle - ARC_RIGHT) * walkProgress;
     var princeX = fp.x + M.sin(curAngle) * pr;
     var princeY = fp.y - M.cos(curAngle) * pr;
 
-    // 新花朵：下一朵的位置（在弧线上）
-    var newFa = flowerStartAngle + plantedFlowers.length * flowerAngleStep;
-    var newFx = fp.x + M.sin(newFa) * pr;
-    var newFy = fp.y - M.cos(newFa) * pr;
-
+    // 新花出现（阶段1和2）
     if (princePhase >= 1 && images.flower) {
-      // 阶段1和2：新花朵沿弧线出现
       var flowerAlpha = princePhase === 2 ? 1 : M.min(1, (elapsed - 1000) / 600);
       ctx.globalAlpha = flowerAlpha;
+      var nfx = fp.x + M.sin(nextAngle) * pr;
+      var nfy = fp.y - M.cos(nextAngle) * pr;
       ctx.save();
-      ctx.translate(newFx, newFy);
-      ctx.rotate(newFa);
+      ctx.translate(nfx, nfy);
+      ctx.rotate(nextAngle);
       ctx.drawImage(images.flower, -10, -14, 20, 22);
       ctx.restore();
       ctx.globalAlpha = 1;
     }
 
+    // 王子可见（阶段0和1）
     if (princePhase <= 1 && images.prince) {
-      // 阶段0和1：小王子沿弧线走动
       var princeAlpha = princePhase === 0 ? 1 : M.max(0, 1 - (elapsed - 2200) / 300);
       ctx.globalAlpha = princeAlpha;
       ctx.save();
