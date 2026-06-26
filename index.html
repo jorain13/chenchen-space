@@ -80,12 +80,12 @@ var CFG = {
   // ── 地球回血 ──
   HEAL_RATE: 20,              // HP per second
 
-  // ── 小星星 ──
-  STAR_SCORES: [50, 100, 300, 500],      // 等级1-4 分值
-  STAR_SPEEDS: [0.3, 0.5, 0.7, 1.0],    // 等级1-4 基础速度（都很慢）
+  // ── 小星星（等级1/2/4，无等级3）──
+  STAR_SCORES: [50, 100, 500],            // 等级1/2/4 分值
+  STAR_SPEEDS: [0.3, 0.5, 1.0],          // 等级1/2/4 基础速度
   STAR_SPAWN_MIN: 1000,                   // 刷新间隔 ms
   STAR_SPAWN_MAX: 3000,
-  STAR_RATIO: [0.40, 0.30, 0.20, 0.10],  // 比例(低等级多)
+  STAR_RATIO: [0.50, 0.35, 0.15],        // 比例
   STAR_BASE: 5,                           // 第1关总数
   STAR_SCALE: 2,                          // 每关+2
   COUNTDOWN_SEC: 10,                      // 通关倒计时
@@ -194,7 +194,7 @@ var boostSpawned = 0;      // 本关已生成闪电数
 var nextStoneTimer  = 0;
 
 // ── 地球 & 行星（固定位置）──
-var EARTH = { x: CFG.WORLD_W * 0.5,  y: CFG.WORLD_H * 0.63, r: 40 };
+var EARTH = { x: CFG.WORLD_W * 0.22, y: CFG.WORLD_H * 0.78, r: 40 };
 var PLANETS = [
   { x: CFG.WORLD_W * 0.16, y: CFG.WORLD_H * 0.26, r: 24 },
   { x: CFG.WORLD_W * 0.84, y: CFG.WORLD_H * 0.37, r: 28 },
@@ -258,7 +258,7 @@ function spawnSpaceJunk(junkSpeed) {
 
 function spawnStar() {
   var roll = M.random(), tier = 0, acc = 0;
-  for (var t = 0; t < 4; t++) { acc += CFG.STAR_RATIO[t]; if (roll < acc) { tier = t; break; } }
+  for (var t = 0; t < 3; t++) { acc += CFG.STAR_RATIO[t]; if (roll < acc) { tier = t; break; } }
   var spd = CFG.STAR_SPEEDS[tier] * rand(0.7, 1.3);
   // 从屏幕边缘刷新
   var s = M.floor(M.random() * 4), x, y, dx, dy;
@@ -798,14 +798,10 @@ function update(dt) {
       // 等级2: 波浪前行
       st.vx = st.baseVX + M.sin(st.phase * 1.5) * 0.5;
       st.vy = st.baseVY;
-    } else if (st.tier === 2) {
-      // 等级3: S形曲线
-      st.vx = st.baseVX;
-      st.vy = st.baseVY + M.sin(st.phase * 2.0) * 0.6;
     } else {
-      // 等级4: 带轻微摆动的直线
-      st.vx = st.baseVX + M.sin(st.phase * 0.8) * 0.2;
-      st.vy = st.baseVY + M.cos(st.phase * 0.6) * 0.2;
+      // 等级4(500分): S形曲线+更快
+      st.vx = st.baseVX + M.sin(st.phase * 2.0) * 0.6;
+      st.vy = st.baseVY + M.cos(st.phase * 1.5) * 0.5;
     }
 
     st.pos.x += st.vx * (dt / 16);
@@ -1005,7 +1001,7 @@ function render() {
     if (images[key2]) {
       ctx.drawImage(images[key2], sts.x - 20, sts.y - 20, 40, 40);
     } else {
-      var sc = ['#ff0', '#fa0', '#f0f', '#0ff'];
+      var sc = ['#ff0', '#fa0', '#f0f'];
       ctx.fillStyle = sc[st.tier];
       ctx.beginPath();
       ctx.arc(sts.x, sts.y, 14, 0, M.PI * 2);
@@ -1308,7 +1304,7 @@ resize();
 window.addEventListener('resize', resize);
 
 // ── 加载图片 ──
-var imgList = { p: '主角.png', m: '大地图.jpg', r: '红色外星人.png', g: '绿色外星人.png', prince: '小王子.png', flower: '小花.png', bolt: '闪电.png', pack: '能量包.png', star0: '等级1小星星.png', star1: '等级2小星星.png', star2: '等级3小星星.png', star3: '等级4小星星.png' };
+var imgList = { p: '主角.png', m: '大地图.jpg', r: '红色外星人.png', g: '绿色外星人.png', prince: '小王子.png', flower: '小花.png', bolt: '闪电.png', pack: '能量包.png', star0: '等级1小星星.png', star1: '等级2小星星.png', star2: '等级4小星星.png' };
 var imgKeys = Object.keys(imgList);
 var imgLoaded = 0;
 
