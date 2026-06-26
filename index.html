@@ -826,12 +826,6 @@ function render() {
       ctx.globalAlpha = 1;
     }
 
-    // 提示文字
-    ctx.fillStyle = 'rgba(255,255,200,0.9)';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.textAlign = 'center';
-    var msg = princePhase === 0 ? '🌹 小王子来了！' : princePhase === 1 ? '🌸 种下第' + (plantedFlowers.length + 1) + '朵小花' : '✨';
-    ctx.fillText(msg, fp.x, fp.y - pr - 55);
   }
 
   // ── 宇宙垃圾 ──
