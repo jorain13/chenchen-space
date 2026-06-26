@@ -1253,7 +1253,9 @@ function render() {
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
     ctx.fillRect(0, 0, screenW, screenH);
     // 箭头从屏幕中央指向按钮
-    var tx = screenW - 46, ty = screenH - 202; // 对齐按钮 bottom:170 right:14
+    var btnRect = document.getElementById('armBtn').getBoundingClientRect();
+    var tx = btnRect.left + btnRect.width / 2;
+    var ty = btnRect.top + btnRect.height / 2;
     var fx = screenW / 2, fy = screenH / 2;
     var pulse = M.sin(Date.now() / 300) * 0.4 + 0.6;
     ctx.strokeStyle = 'rgba(255,220,50,' + pulse + ')';
