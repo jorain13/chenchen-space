@@ -1024,7 +1024,7 @@ function render() {
       ctx.restore();
       // 公主：首次王子到位后1.5x速赶来，之后一起出发
       // 公主走在王子右侧
-      if (plantedFlowers.length >= 98 && images.princess) { // 第99朵起公主出现
+      if (plantedFlowers.length >= 0 && images.princess) {
         var pssX, pssY;
         if (plantedFlowers.length === 0) {
           var pssProgress = M.min(1, M.max(0, walkProgress - 0.7) / 0.3 * 1.5);
