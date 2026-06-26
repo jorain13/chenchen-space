@@ -175,8 +175,12 @@ var princeTimer = 0;       // 动画计时器
 var countdownStart = 0;    // 倒计时开始时间
 var plantedFlowers = [];   // 永久种植的小花
 var redCount = 5;          // 当前关卡红外星人目标数
-var armHint = true;        // 抓取提示是否显示
-var hintPause = false;     // 是否暂停等待抓取教学
+var armHint = true;        // 抓取提示
+var boostHint = true;      // 闪电提示
+var ammoHint = true;       // 能量包提示
+var hintPause = false;     // 暂停教学
+var hintMsg = '';          // 教学文字
+var hintTimer = 0;         // 提示自动消失计时
 var level     = 1;
 var score     = 0;
 var mouseShoot = false;
@@ -356,7 +360,7 @@ function startGame() {
   shakeAmt = 0;
   ammoSpawned = 0; boostSpawned = 0;
   armState = 'idle'; armLength = 0; armGrabbed = null; armSlow = 1;
-  armHint = true; hintPause = false;
+  armHint = true; boostHint = true; ammoHint = true; hintPause = false; hintMsg = '';
 
   initLevel(1);
 }
@@ -383,8 +387,7 @@ function levelWin() {
 
 function deployArm() {
   if (armState !== 'idle' || !player) return;
-  armHint = false;
-  hintPause = false;
+  armHint = false; boostHint = false; ammoHint = false; hintPause = false; hintMsg = '';
   armState = 'extending';
   armLength = 0;
   armAngle = player.heading;
@@ -528,7 +531,11 @@ function update(dt) {
     }
   }
   if (state !== 'play' && state !== 'countdown') return;
-  if (hintPause) return; // 教学暂停，等按机械臂
+  if (hintPause) {
+    // 非抓取提示3秒后自动消失
+    if (hintMsg && Date.now() - hintTimer > 3000) { hintPause = false; hintMsg = ''; }
+    return;
+  }
   var now = Date.now();
   gameTime += dt;
   if (shakeAmt > 0) shakeAmt = M.max(0, shakeAmt - dt / 200);
@@ -755,13 +762,13 @@ function update(dt) {
     if (dist(pk.pos, player) < 28) {
       if (pk.type === 'ammo') {
         player.ammo = M.min(CFG.PLAYER_AMMO, player.ammo + 20);
-        // 触发3秒快速连发
         player.rapidFireUntil = now + CFG.RAPID_FIRE_DURATION;
         player.bulletSpeed = CFG.BULLET_SPEED_MAX;
+        if (ammoHint) { ammoHint = false; hintPause = true; hintMsg = '补充弹药，加速射击'; hintTimer = Date.now(); }
       } else {
-        // 闪电：移动速度大幅提升
         player.speed = CFG.BOOST_SPEED;
         player.boostUntil = now + CFG.BOOST_DURATION;
+        if (boostHint) { boostHint = false; hintPause = true; hintMsg = '⚡ 加速'; hintTimer = Date.now(); }
       }
       pickups.splice(i, 1);
       updateHUD();
@@ -790,7 +797,7 @@ function update(dt) {
     spawnStar();
     if (stars.length < starQuota) spawnStar();
     // 第一次出现星星→暂停教学
-    if (armHint && stars.length > 0) { hintPause = true; }
+    if (armHint && stars.length > 0) { hintPause = true; hintTimer = Date.now(); }
     nextStoneTimer = now + rand(CFG.STAR_SPAWN_MIN, CFG.STAR_SPAWN_MAX);
   }
 
@@ -1246,7 +1253,7 @@ function render() {
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
     ctx.fillRect(0, 0, screenW, screenH);
     // 箭头从屏幕中央指向按钮
-    var tx = screenW - 46, ty = screenH - 138;
+    var tx = screenW - 46, ty = screenH - 202; // 对齐按钮 bottom:170 right:14
     var fx = screenW / 2, fy = screenH / 2;
     var pulse = M.sin(Date.now() / 300) * 0.4 + 0.6;
     ctx.strokeStyle = 'rgba(255,220,50,' + pulse + ')';
@@ -1275,11 +1282,10 @@ function render() {
     ctx.fillStyle = '#ff0';
     ctx.font = 'bold 20px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('👆 按键抓取', tx, ty - 55);
+    ctx.fillText(hintMsg || '👆 按键抓取', tx, ty - 55);
     ctx.fillStyle = '#fff';
     ctx.font = '14px sans-serif';
     ctx.fillText('点击右侧按钮', screenW / 2, screenH * 0.65);
-    ctx.fillText('用机械臂抓星星', screenW / 2, screenH * 0.65 + 22);
   }
 
   // ── 倒计时覆盖 ──
