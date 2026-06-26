@@ -324,7 +324,7 @@ function initLevel(lv) {
   bombs = [];
   var bombN = 1 + M.floor(M.random() * 5);
   for (i = 0; i < bombN; i++) {
-    bombs.push({ pos: { x: rand(60, CFG.WORLD_W - 60), y: rand(60, CFG.WORLD_H - 60) }, life: 900 });
+    bombs.push({ pos: { x: rand(60, CFG.WORLD_W - 60), y: rand(60, CFG.WORLD_H - 60) }, life: 1800, phase: rand(0, M.PI*2) });
   }
 
   // 每关能量包+闪电配额：第1关各3个，之后每关各+1
@@ -1052,14 +1052,22 @@ function render() {
   for (var i = 0; i < bombs.length; i++) {
     var bm = bombs[i];
     var bms = w2s(bm.pos.x, bm.pos.y);
+    var pulse2 = M.sin(bm.phase + gameTime * 0.05) * 0.3 + 0.7;
+    // 红色脉冲光环
+    var bg = ctx.createRadialGradient(bms.x, bms.y, 8, bms.x, bms.y, 28);
+    bg.addColorStop(0, 'rgba(255,60,20,' + (0.5 * pulse2) + ')');
+    bg.addColorStop(1, 'rgba(255,0,0,0)');
+    ctx.fillStyle = bg;
+    ctx.beginPath(); ctx.arc(bms.x, bms.y, 28, 0, M.PI*2); ctx.fill();
+    // 炸弹本体
     if (images.bomb) {
-      ctx.drawImage(images.bomb, bms.x - 18, bms.y - 16, 36, 32);
+      ctx.drawImage(images.bomb, bms.x - 24, bms.y - 22, 48, 44);
     } else {
-      ctx.fillStyle = '#222';
-      ctx.beginPath(); ctx.arc(bms.x, bms.y, 14, 0, M.PI * 2); ctx.fill();
+      ctx.fillStyle = '#333';
+      ctx.beginPath(); ctx.arc(bms.x, bms.y, 18, 0, M.PI*2); ctx.fill();
       ctx.fillStyle = '#f00';
-      ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('💣', bms.x, bms.y + 4);
+      ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('💣', bms.x, bms.y + 5);
     }
   }
 
