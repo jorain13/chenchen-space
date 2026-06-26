@@ -931,6 +931,7 @@ function render() {
 
   // ── 行星 ──
   for (var i = 0; i < PLANETS.length; i++) {
+    if (i === 3) continue; // 小王子星球不画虚线
     var ps = w2s(PLANETS[i].x, PLANETS[i].y);
     ctx.strokeStyle = 'rgba(255,120,60,0.3)';
     ctx.lineWidth = 2;
