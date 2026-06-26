@@ -390,18 +390,20 @@ function updateArm(dt) {
   var spd = CFG.ARM_SPEED * (dt / 16);
 
   if (armState === 'extending') {
+    // 机械臂方向始终跟随火箭头部
+    armAngle = player.heading;
     armLength += spd * 2;
     if (armLength >= CFG.ARM_MAX_LEN) {
       armLength = CFG.ARM_MAX_LEN;
       armState = 'retracting';
     }
-    // 检测碰到能量石
-    var tipX = player.x + M.cos(armAngle) * armLength;
-    var tipY = player.y + M.sin(armAngle) * armLength;
+    // 检测碰到能量石（从火箭头部算起）
+    var tipX = player.x + M.cos(armAngle) * (armLength + 20);
+    var tipY = player.y + M.sin(armAngle) * (armLength + 20);
     for (var i = energyStones.length - 1; i >= 0; i--) {
       if (dist({ x: tipX, y: tipY }, energyStones[i].pos) < 26) {
         armGrabbed = energyStones[i];
-        armSlow = CFG.ARM_SLOW[armGrabbed.tier]; // 抓石减速
+        armSlow = CFG.ARM_SLOW[armGrabbed.tier];
         armState = 'retracting';
         break;
       }
@@ -781,6 +783,11 @@ function update(dt) {
     es.pos.y += es.vy * (dt / 16);
     es.life--;
     if (dist(es.pos, player) < 28) {
+      if (es.tier === 2) {
+        // 3级能量石碰到即死，只能机械臂抓取
+        gameOver('被能量石撞毁！💎');
+        return;
+      }
       var pts = CFG.STONE_SCORES[es.tier];
       score += pts;
       floatingTxt.push({ x: es.pos.x, y: es.pos.y, text: '+' + pts, life: 60, vy: -2 });
@@ -828,9 +835,11 @@ function update(dt) {
     if (p.life <= 0) particles.splice(i, 1);
   }
 
-  // ── 相机跟随 ──
-  camera.x = clamp(player.x - screenW / 2, 0, CFG.WORLD_W - screenW);
-  camera.y = clamp(player.y - screenH / 2, 0, CFG.WORLD_H - screenH);
+  // ── 相机跟随（适配缩放后可视区域）──
+  var viewW = screenW / M.max(screenW / CFG.WORLD_W, screenH / CFG.WORLD_H);
+  var viewH = screenH / M.max(screenW / CFG.WORLD_W, screenH / CFG.WORLD_H);
+  camera.x = clamp(player.x - viewW / 2, 0, M.max(0, CFG.WORLD_W - viewW));
+  camera.y = clamp(player.y - viewH / 2, 0, M.max(0, CFG.WORLD_H - viewH));
 
   // ── 补充绿色外星人 ──
   var targetGreen = M.max(1, M.floor(level / 3));
@@ -868,8 +877,8 @@ function render() {
   var now = Date.now();
   var t = gameTime;
 
-  // 世界缩放：让 800x449 的世界铺满整个屏幕
-  var worldScale = M.min(screenW / CFG.WORLD_W, screenH / CFG.WORLD_H);
+  // 世界缩放：用 max 确保铺满屏幕无黑边
+  var worldScale = M.max(screenW / CFG.WORLD_W, screenH / CFG.WORLD_H);
   var offsetX = (screenW - CFG.WORLD_W * worldScale) / 2;
   var offsetY = (screenH - CFG.WORLD_H * worldScale) / 2;
 
@@ -1015,6 +1024,13 @@ function render() {
       ctx.beginPath();
       ctx.arc(ess.x, ess.y + bob, 14 + es.tier * 5, 0, M.PI * 2);
       ctx.fill();
+    }
+    // 3级能量石危险标记
+    if (es.tier === 2) {
+      ctx.fillStyle = '#f00';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('💀', ess.x, ess.y + bob - 24);
     }
   }
 
@@ -1183,15 +1199,18 @@ function render() {
   // ── 机械臂 ──
   if (armState !== 'idle' && player) {
     var ps2 = w2s(player.x, player.y);
-    var tipX = ps2.x + M.cos(armAngle) * armLength;
-    var tipY = ps2.y + M.sin(armAngle) * armLength;
+    // 从火箭头部（nose）出发
+    var noseX = ps2.x + M.cos(armAngle) * 20;
+    var noseY = ps2.y + M.sin(armAngle) * 20;
+    var tipX = noseX + M.cos(armAngle) * armLength;
+    var tipY = noseY + M.sin(armAngle) * armLength;
 
     // 绳索
     ctx.strokeStyle = '#ccc';
     ctx.lineWidth = 2;
     ctx.setLineDash([]);
     ctx.beginPath();
-    ctx.moveTo(ps2.x, ps2.y);
+    ctx.moveTo(noseX, noseY);
     ctx.lineTo(tipX, tipY);
     ctx.stroke();
 
