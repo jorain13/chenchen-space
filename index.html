@@ -187,6 +187,8 @@ var gameTime = 0;
 var shakeAmt = 0;
 
 var nextPickupTimer = 0;
+var ammoSpawned = 0;       // 本关已生成能量包数
+var boostSpawned = 0;      // 本关已生成闪电数
 var nextCometTimer  = 0;
 var nextStoneTimer  = 0;
 
@@ -318,8 +320,10 @@ function initLevel(lv) {
   floatingTxt = [];
   particles = [];
 
-  // 关卡越高，能量包出现越快
-  nextPickupTimer = Date.now() + rand(M.max(3000, 8000 - lv * 500), M.max(5000, 15000 - lv * 1000));
+  // 每关能量包+闪电配额：第1关各3个，之后每关各+1
+  ammoSpawned = 0;
+  boostSpawned = 0;
+  nextPickupTimer = Date.now() + rand(2000, 4000);
   nextCometTimer  = Date.now() + rand(4000, 8000);
   // 陨石：关卡越高越多
   nextStoneTimer  = Date.now() + rand(CFG.METEOR_SPAWN_MIN, CFG.METEOR_SPAWN_MAX);
@@ -354,6 +358,7 @@ function startGame() {
   plantedFlowers = [];
   gameTime = 0;
   shakeAmt = 0;
+  ammoSpawned = 0; boostSpawned = 0;
   armState = 'idle'; armLength = 0; armGrabbed = null; armSlow = 1;
 
   initLevel(1);
@@ -723,17 +728,20 @@ function update(dt) {
     }
   }
 
-  // ── 随机能量包 ──
-  if (now > nextPickupTimer) {
-    var types = ['boost', 'boost', 'ammo', 'ammo'];
+  // ── 能量包+闪电（每关配额制）──
+  var ammoQuota = 2 + level;   // 第1关=3, 第2关=4...
+  var boostQuota = 2 + level;
+  if (now > nextPickupTimer && (ammoSpawned < ammoQuota || boostSpawned < boostQuota)) {
+    // 交替生成或随机补缺
+    var spawnAmmo = ammoSpawned < ammoQuota && (ammoSpawned <= boostSpawned || boostSpawned >= boostQuota);
     pickups.push({
       pos: { x: rand(80, CFG.WORLD_W - 80), y: rand(80, CFG.WORLD_H - 80) },
-      type: types[M.floor(M.random() * 4)],
+      type: spawnAmmo ? 'ammo' : 'boost',
       life: 650,
       vy: -0.3
     });
-    // 关卡越高刷新越快
-    nextPickupTimer = now + rand(M.max(2000, 5000 - level * 300), M.max(4000, 12000 - level * 700));
+    if (spawnAmmo) ammoSpawned++; else boostSpawned++;
+    nextPickupTimer = now + rand(2000, 4000);
   }
 
   // ── 拾取能量包 ──
