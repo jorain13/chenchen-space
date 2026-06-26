@@ -151,6 +151,7 @@ var bullets     = [];
 var enemyBullets = [];
 var pickups     = [];
 var energyStones = [];
+var floatingTxt  = [];   // 浮动文字 +50 +100 等
 var particles   = [];
 
 var camera  = { x: 0, y: 0 };
@@ -297,6 +298,7 @@ function initLevel(lv) {
   enemyBullets = [];
   pickups = [];
   energyStones = [];
+  floatingTxt = [];
   particles = [];
 
   // 关卡越高，能量包出现越快
@@ -705,7 +707,9 @@ function update(dt) {
     es.pos.y += es.vy * (dt / 16);
     es.life--;
     if (dist(es.pos, player) < 28) {
-      score += CFG.STONE_SCORES[es.tier];
+      var pts = CFG.STONE_SCORES[es.tier];
+      score += pts;
+      floatingTxt.push({ x: es.pos.x, y: es.pos.y, text: '+' + pts, life: 60, vy: -2 });
       spawnParticles(es.pos.x, es.pos.y, '#ff0', 8);
       energyStones.splice(i, 1);
       updateHUD();
@@ -731,6 +735,14 @@ function update(dt) {
         cm.pos.y < -100 || cm.pos.y > CFG.WORLD_H + 100) {
       comets.splice(i, 1);
     }
+  }
+
+  // ── 浮动文字衰减 ──
+  for (var i = floatingTxt.length - 1; i >= 0; i--) {
+    var ft = floatingTxt[i];
+    ft.y += ft.vy * (dt / 16);
+    ft.life--;
+    if (ft.life <= 0) floatingTxt.splice(i, 1);
   }
 
   // ── 粒子衰减 ──
@@ -913,19 +925,14 @@ function render() {
     var bob = M.sin(es.bob + gameTime * 0.03) * 4;
     var key = 'stone' + es.tier;
     if (images[key]) {
-      ctx.drawImage(images[key], ess.x - 16, ess.y + bob - 16, 32, 32);
+      ctx.drawImage(images[key], ess.x - 22, ess.y + bob - 22, 44, 44);
     } else {
       var stoneColors = ['#4af', '#fa4', '#f4f'];
       ctx.fillStyle = stoneColors[es.tier];
       ctx.beginPath();
-      ctx.arc(ess.x, ess.y + bob, 12 + es.tier * 4, 0, M.PI * 2);
+      ctx.arc(ess.x, ess.y + bob, 14 + es.tier * 5, 0, M.PI * 2);
       ctx.fill();
     }
-    // 分值标签
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 10px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('+' + CFG.STONE_SCORES[es.tier], ess.x, ess.y + bob - 18);
   }
 
   // ── 陨石 ──
@@ -1102,6 +1109,19 @@ function render() {
   }
   ctx.globalAlpha = 1;
 
+  // ── 浮动文字 ──
+  for (var i = 0; i < floatingTxt.length; i++) {
+    var ft = floatingTxt[i];
+    var fts = w2s(ft.x, ft.y);
+    var alpha = M.min(1, ft.life / 30);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#ff0';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(ft.text, fts.x, fts.y);
+  }
+  ctx.globalAlpha = 1;
+
   // ── 虚拟摇杆 ──
   ctx.strokeStyle = 'rgba(255,255,255,0.25)';
   ctx.lineWidth = 2;
@@ -1206,14 +1226,10 @@ canvas.addEventListener('touchstart', function(e) {
   if (state !== 'play') return;
   for (var i = 0; i < e.touches.length; i++) {
     var t = e.touches[i];
-    if (t.clientX < screenW * 0.4 && t.clientY > screenH * 0.5) {
-      var dx = t.clientX - joystick.cx;
-      var dy = t.clientY - joystick.cy;
-      if (M.hypot(dx, dy) < joystick.r * 1.5) {
-        joystick.active = true;
-        joystick.dx = dx;
-        joystick.dy = dy;
-      }
+    if (t.clientX < screenW * 0.45 && t.clientY > screenH * 0.4) {
+      joystick.active = true;
+      joystick.dx = t.clientX - joystick.cx;
+      joystick.dy = t.clientY - joystick.cy;
     } else {
       mouseShoot = true;
     }
@@ -1226,14 +1242,10 @@ canvas.addEventListener('touchmove', function(e) {
   var hasL = false, hasR = false;
   for (var i = 0; i < e.touches.length; i++) {
     var t = e.touches[i];
-    if (t.clientX < screenW * 0.4 && t.clientY > screenH * 0.5) {
-      var dx = t.clientX - joystick.cx;
-      var dy = t.clientY - joystick.cy;
-      if (M.hypot(dx, dy) < joystick.r * 1.5) {
-        hasL = true;
-        joystick.dx = dx;
-        joystick.dy = dy;
-      }
+    if (t.clientX < screenW * 0.45 && t.clientY > screenH * 0.4) {
+      hasL = true;
+      joystick.dx = t.clientX - joystick.cx;
+      joystick.dy = t.clientY - joystick.cy;
     } else {
       hasR = true;
     }
@@ -1245,7 +1257,7 @@ canvas.addEventListener('touchmove', function(e) {
 canvas.addEventListener('touchend', function(e) {
   var hasL = false, hasR = false;
   for (var i = 0; i < e.touches.length; i++) {
-    if (e.touches[i].clientX < screenW * 0.4 && e.touches[i].clientY > screenH * 0.5) hasL = true;
+    if (e.touches[i].clientX < screenW * 0.45 && e.touches[i].clientY > screenH * 0.4) hasL = true;
     else hasR = true;
   }
   if (!hasL) joystick.active = false;
@@ -1254,14 +1266,10 @@ canvas.addEventListener('touchend', function(e) {
 
 // ── 桌面鼠标 ──
 canvas.addEventListener('mousemove', function(e) {
-  if (state === 'play' && e.clientX < screenW * 0.4) {
-    var dx = e.clientX - joystick.cx;
-    var dy = e.clientY - joystick.cy;
-    if (M.hypot(dx, dy) < joystick.r * 1.5) {
-      joystick.active = true;
-      joystick.dx = dx;
-      joystick.dy = dy;
-    }
+  if (state === 'play' && e.clientX < screenW * 0.45) {
+    joystick.active = true;
+    joystick.dx = e.clientX - joystick.cx;
+    joystick.dy = e.clientY - joystick.cy;
   }
 });
 canvas.addEventListener('mousedown', function(e) {
