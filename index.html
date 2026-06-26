@@ -63,7 +63,7 @@ var CFG = {
   RAPID_FIRE_DURATION: 5000,  // 能量弹持续时间 ms
 
   // ── 闪电加速 ──
-  BOOST_SPEED: 10,            // 闪电加速后的速度
+  BOOST_SPEED: 6,             // 闪电加速后的速度
   BOOST_DURATION: 5000,       // 闪电持续 ms
 
   // ── 红色外星人 ──
@@ -410,6 +410,7 @@ function updateArm(dt) {
       }
     }
   } else if (armState === 'retracting') {
+    armAngle = player.heading; // 回收时也保持对齐
     var retractSpd = armGrabbed ? spd * (1 - armGrabbed.tier * 0.25) : spd * 3;
     armLength = M.max(0, armLength - retractSpd);
     if (armLength <= 2) {
