@@ -69,8 +69,8 @@ var CFG = {
   // ── 红色外星人 ──
   RED_BULLET_DMG: 10,         // 1/10 of max HP
   RED_BULLET_SPEED: 3.5,
-  RED_BASE_COUNT: 3,          // level 1 count
-  RED_COUNT_SCALE: 2,         // +2 per level
+  RED_BASE_COUNT: 5,          // level 1 count
+  RED_COUNT_SCALE: 3,         // +3 per level
   RED_AGGRO_RANGE: 180,       // 进入此范围后转为追击模式
 
   // ── 宇宙垃圾 ──
@@ -86,6 +86,8 @@ var CFG = {
   STAR_SPAWN_MIN: 2000,                   // 刷新间隔 ms
   STAR_SPAWN_MAX: 5000,
   STAR_RATIO: [0.45, 0.30, 0.18, 0.07],  // 比例(低等级多)
+  STAR_BASE: 20,                          // 第1关总数
+  STAR_SCALE: 5,                          // 每关+5
   COUNTDOWN_SEC: 10,                      // 通关倒计时
 
   // ── 机械臂 ──
@@ -170,8 +172,10 @@ var camera  = { x: 0, y: 0 };
 var lastFrame = 0;
 var lastShot  = 0;
 var state     = 'title';   // 'title' | 'play' | 'over' | 'countdown'
+var princePhase = 0;       // 小王子动画阶段
+var princeTimer = 0;       // 动画计时器
 var countdownStart = 0;    // 倒计时开始时间
-var plantedFlowers = [];   // 保留：小花数组（暂存）
+var plantedFlowers = [];   // 永久种植的小花
 var level     = 1;
 var score     = 0;
 var mouseShoot = false;
@@ -386,8 +390,9 @@ function gameOver(reason) {
 }
 
 function levelWin() {
-  // 击杀全部红色外星人 → 倒计时10s
   state = 'countdown';
+  princePhase = 0;
+  princeTimer = Date.now();
   countdownStart = Date.now();
 }
 
@@ -449,7 +454,7 @@ function updateArm(dt) {
 function updateHUD() {
   if (state === 'countdown') {
     var remain = M.max(0, M.ceil((CFG.COUNTDOWN_SEC * 1000 - (Date.now() - countdownStart)) / 1000));
-    document.getElementById('info').textContent = '⏳ 通关！' + remain + 's';
+    document.getElementById('info').textContent = '🌸 通关 ' + remain + 's';
     return;
   }
   if (!player) return;
@@ -509,9 +514,15 @@ function playerFire(now, force) {
 
 function update(dt) {
   if (state === 'countdown') {
+    // 小王子动画 + 倒计时并行
+    var elapsed2 = Date.now() - princeTimer;
+    if (elapsed2 < 1000) princePhase = 0;
+    else if (elapsed2 < 2500) princePhase = 1;
+    else princePhase = 2;
+
     // 倒计时结束 → 下一关
     if (Date.now() - countdownStart > CFG.COUNTDOWN_SEC * 1000) {
-      plantedFlowers.push(level); // 保留计数
+      plantedFlowers.push(level);
       level++;
       player.hp   = M.min(CFG.PLAYER_HP, player.hp + 30);
       player.ammo = M.min(CFG.PLAYER_AMMO, player.ammo + 30);
@@ -525,7 +536,6 @@ function update(dt) {
       state = 'play';
       updateHUD();
     }
-    // 倒计时期间仍可移动和拾取星星
   }
   if (state !== 'play' && state !== 'countdown') return;
   var now = Date.now();
@@ -783,8 +793,9 @@ function update(dt) {
     j.rotation += j.rotSpeed * (dt / 16);
   }
 
-  // ── 小星星刷新（从边缘直线飞行）──
-  if (now > nextStoneTimer) {
+  // ── 小星星刷新（每关配额制，第1关20颗，之后每关+5）──
+  var starQuota = CFG.STAR_BASE + (level - 1) * CFG.STAR_SCALE;
+  if (now > nextStoneTimer && stars.length < starQuota) {
     spawnStar();
     nextStoneTimer = now + rand(CFG.STAR_SPAWN_MIN, CFG.STAR_SPAWN_MAX);
   }
@@ -921,6 +932,55 @@ function render() {
     ctx.arc(ps.x, ps.y, PLANETS[i].r, 0, M.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
+  }
+
+  // ── 永久种植的小花 + 小王子（右下角黄色大星球弧面）──
+  var flowerPlanet = PLANETS[3];
+  var fp = w2s(flowerPlanet.x, flowerPlanet.y);
+  var pr2 = flowerPlanet.r;
+  var ARC_RIGHT = 50 * M.PI / 180;
+  var ARC_LEFT  = -22 * M.PI / 180;
+  var ARC_STEP  = 14 * M.PI / 180;
+
+  if (images.flower) {
+    for (var fi = 0; fi < plantedFlowers.length; fi++) {
+      var fa = ARC_LEFT + fi * ARC_STEP;
+      var ffx = fp.x + M.sin(fa) * pr2;
+      var ffy = fp.y - M.cos(fa) * pr2;
+      ctx.save(); ctx.translate(ffx, ffy); ctx.rotate(fa);
+      ctx.drawImage(images.flower, -10, -14, 20, 22);
+      ctx.restore();
+    }
+  }
+
+  if (state === 'countdown') {
+    var el = Date.now() - princeTimer;
+    var nextAngle = ARC_LEFT + plantedFlowers.length * ARC_STEP;
+    var walkProgress = princePhase === 0 ? M.min(1, el / 1000) : 1;
+    walkProgress = 1 - M.pow(1 - walkProgress, 2);
+    var curAngle = ARC_RIGHT + (nextAngle - ARC_RIGHT) * walkProgress;
+    var prX = fp.x + M.sin(curAngle) * pr2;
+    var prY = fp.y - M.cos(curAngle) * pr2;
+
+    if (princePhase >= 1 && images.flower) {
+      var fa2 = princePhase === 2 ? 1 : M.min(1, (el - 1000) / 600);
+      ctx.globalAlpha = fa2;
+      var nfx = fp.x + M.sin(nextAngle) * pr2;
+      var nfy = fp.y - M.cos(nextAngle) * pr2;
+      ctx.save(); ctx.translate(nfx, nfy); ctx.rotate(nextAngle);
+      ctx.drawImage(images.flower, -10, -14, 20, 22);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+
+    if (princePhase <= 1 && images.prince) {
+      var pa = princePhase === 0 ? 1 : M.max(0, 1 - (el - 2200) / 300);
+      ctx.globalAlpha = pa;
+      ctx.save(); ctx.translate(prX, prY); ctx.rotate(curAngle);
+      ctx.drawImage(images.prince, -22, -55, 44, 55);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
   }
 
   // ── 宇宙垃圾 ──
