@@ -596,7 +596,7 @@ function update(dt) {
     if (dist(player, spaceJunk[i].pos) < spaceJunk[i].radius + 14) { gameOver('撞到太空垃圾'); return; }
   }
   for (var i = bombs.length - 1; i >= 0; i--) {
-    if (dist(player, bombs[i].pos) < 28) {
+    if (dist(player, bombs[i].pos) < 40) {
       // 炸弹爆炸：范围红外星人变黑后消失
       var blastR = CFG.ARM_MAX_LEN + 50;
       for (var j = redAliens.length - 1; j >= 0; j--) {
@@ -1024,7 +1024,7 @@ function render() {
         var pssX = prX - 30;
         var pssY = prY;
         ctx.save(); ctx.translate(pssX, pssY);
-        ctx.drawImage(images.princess, -22, -55, 44, 55);
+        ctx.drawImage(images.princess, -30, -60, 60, 65);
         ctx.restore();
       }
       ctx.globalAlpha = 1;
