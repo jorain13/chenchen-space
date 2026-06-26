@@ -390,6 +390,7 @@ function gameOver(reason) {
 }
 
 function levelWin() {
+  if (state === 'countdown') return;
   state = 'countdown';
   princePhase = 0;
   princeTimer = Date.now();
