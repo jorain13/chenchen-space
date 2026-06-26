@@ -75,7 +75,12 @@ var CFG = {
   JUNK_COUNT_SCALE: 1,        // +1 per level
 
   // ── 地球回血 ──
-  HEAL_RATE: 10               // HP per second
+  HEAL_RATE: 10,              // HP per second
+
+  // ── 能量石积分 ──
+  STONE_SCORES: [50, 100, 300],       // 等级1/2/3 分值
+  STONE_SPAWN_MIN: 3000,              // 最短刷新间隔 ms
+  STONE_SPAWN_MAX: 8000               // 最长刷新间隔 ms
 };
 
 // ============================================================
@@ -145,6 +150,7 @@ var comets      = [];
 var bullets     = [];
 var enemyBullets = [];
 var pickups     = [];
+var energyStones = [];
 var particles   = [];
 
 var camera  = { x: 0, y: 0 };
@@ -164,6 +170,7 @@ var shakeAmt = 0;
 
 var nextPickupTimer = 0;
 var nextCometTimer  = 0;
+var nextStoneTimer  = 0;
 
 // ── 地球 & 行星（固定位置）──
 var EARTH = { x: CFG.WORLD_W * 0.5,  y: CFG.WORLD_H * 0.63, r: 40 };
@@ -228,6 +235,19 @@ function spawnSpaceJunk(junkSpeed) {
   };
 }
 
+function spawnEnergyStone() {
+  // 高等级概率低：等级1=60%, 等级2=30%, 等级3=10%
+  var roll = M.random();
+  var tier = roll < 0.6 ? 0 : roll < 0.9 ? 1 : 2;
+  energyStones.push({
+    pos: { x: rand(60, CFG.WORLD_W - 60), y: rand(60, CFG.WORLD_H - 60) },
+    tier: tier,
+    life: 500,
+    vy: -0.2,
+    bob: rand(0, M.PI * 2)
+  });
+}
+
 function spawnComet() {
   var s = M.floor(M.random() * 4), x, y, dir;
   if      (s === 0) { x = rand(0, CFG.WORLD_W); y = -30;          dir = rand(M.PI * 0.3, M.PI * 0.7); }
@@ -276,11 +296,14 @@ function initLevel(lv) {
   bullets = [];
   enemyBullets = [];
   pickups = [];
+  energyStones = [];
   particles = [];
 
   // 关卡越高，能量包出现越快
   nextPickupTimer = Date.now() + rand(M.max(3000, 8000 - lv * 500), M.max(5000, 15000 - lv * 1000));
   nextCometTimer  = Date.now() + rand(4000, 8000);
+  // 能量石：关卡越高刷新越慢
+  nextStoneTimer  = Date.now() + rand(CFG.STONE_SPAWN_MIN + lv * 500, CFG.STONE_SPAWN_MAX + lv * 1000);
 
   updateHUD();
 }
@@ -328,7 +351,6 @@ function gameOver(reason) {
 }
 
 function levelWin() {
-  score += level * 200;
   // 触发小王子场景
   state = 'prince';
   princePhase = 0;
@@ -343,7 +365,7 @@ function updateHUD() {
   if (!player) return;
   document.getElementById('hp').textContent   = '❤️' + M.max(0, M.round(player.hp));
   document.getElementById('ammo').textContent = '🔫' + player.ammo;
-  document.getElementById('info').textContent = '🌌第' + level + '关 👾' + redAliens.length + ' ⭐' + score;
+  document.getElementById('info').textContent = '🌌第' + level + '关 👾' + redAliens.length + ' 💎' + score;
 }
 
 // ============================================================
@@ -494,7 +516,6 @@ function update(dt) {
         if (a.hp <= 0) {
           spawnParticles(a.pos.x, a.pos.y, '#f84', 25);
           redAliens.splice(j, 1);
-          score += 100;
           updateHUD();
           if (!redAliens.length) { levelWin(); return; }
         }
@@ -670,6 +691,29 @@ function update(dt) {
     j.pos.x = clamp(j.pos.x, 15, CFG.WORLD_W - 15);
     j.pos.y = clamp(j.pos.y, 15, CFG.WORLD_H - 15);
     j.rotation += j.rotSpeed * (dt / 16);
+  }
+
+  // ── 能量石刷新（关卡越高越稀有）──
+  if (now > nextStoneTimer) {
+    if (energyStones.length < 3) spawnEnergyStone();
+    nextStoneTimer = now + rand(CFG.STONE_SPAWN_MIN + level * 500, CFG.STONE_SPAWN_MAX + level * 1000);
+  }
+
+  // ── 拾取能量石 ──
+  for (var i = energyStones.length - 1; i >= 0; i--) {
+    var es = energyStones[i];
+    es.pos.y += es.vy * (dt / 16);
+    es.life--;
+    if (dist(es.pos, player) < 28) {
+      score += CFG.STONE_SCORES[es.tier];
+      spawnParticles(es.pos.x, es.pos.y, '#ff0', 8);
+      energyStones.splice(i, 1);
+      updateHUD();
+      continue;
+    }
+    if (es.life <= 0 || es.pos.y > CFG.WORLD_H + 60) {
+      energyStones.splice(i, 1);
+    }
   }
 
   // ── 陨石（第1关起，随关卡增多）──
@@ -860,6 +904,28 @@ function render() {
     ctx.fill();
     ctx.stroke();
     ctx.restore();
+  }
+
+  // ── 能量石 ──
+  for (var i = 0; i < energyStones.length; i++) {
+    var es = energyStones[i];
+    var ess = w2s(es.pos.x, es.pos.y);
+    var bob = M.sin(es.bob + gameTime * 0.03) * 4;
+    var key = 'stone' + es.tier;
+    if (images[key]) {
+      ctx.drawImage(images[key], ess.x - 16, ess.y + bob - 16, 32, 32);
+    } else {
+      var stoneColors = ['#4af', '#fa4', '#f4f'];
+      ctx.fillStyle = stoneColors[es.tier];
+      ctx.beginPath();
+      ctx.arc(ess.x, ess.y + bob, 12 + es.tier * 4, 0, M.PI * 2);
+      ctx.fill();
+    }
+    // 分值标签
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('+' + CFG.STONE_SCORES[es.tier], ess.x, ess.y + bob - 18);
   }
 
   // ── 陨石 ──
@@ -1096,7 +1162,7 @@ resize();
 window.addEventListener('resize', resize);
 
 // ── 加载图片 ──
-var imgList = { p: '主角.png', m: '大地图.jpg', r: '红色外星人.png', g: '绿色外星人.png', prince: '小王子.png', flower: '小花.png', bolt: '闪电.png', pack: '能量包.png', comet: '陨石.png' };
+var imgList = { p: '主角.png', m: '大地图.jpg', r: '红色外星人.png', g: '绿色外星人.png', prince: '小王子.png', flower: '小花.png', bolt: '闪电.png', pack: '能量包.png', comet: '陨石.png', stone0: '等级1能量石.png', stone1: '等级2能量石.png', stone2: '等级3能量石.png' };
 var imgKeys = Object.keys(imgList);
 var imgLoaded = 0;
 
