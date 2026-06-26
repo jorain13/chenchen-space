@@ -1488,17 +1488,15 @@ var imgList = { p: '主角.png', m: '大地图.jpg', r: '红色外星人.png', g
 var imgKeys = Object.keys(imgList);
 var imgLoaded = 0;
 
-// 先启动游戏再加载图片（封面已显示）
 for (var k in imgList) {
   (function(key) {
     var img = new Image();
     images[key] = null;
-    img.onload = function() { images[key] = img; };
-    img.onerror = function() {};
+    img.onload = function() { images[key] = img; imgLoaded++; if (imgLoaded >= imgKeys.length) { lastFrame = Date.now(); gameLoop(); } };
+    img.onerror = function() { imgLoaded++; if (imgLoaded >= imgKeys.length) { lastFrame = Date.now(); gameLoop(); } };
     img.src = imgList[key];
   })(k);
 }
-lastFrame = Date.now(); gameLoop();
 
 // ── 开始按钮 ──
 var startBtn = document.getElementById('startBtn');
