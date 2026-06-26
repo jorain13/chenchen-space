@@ -449,9 +449,15 @@ function updateArm(dt) {
         break;
       }
     }
-    // 抓取炸弹
+    // 机械臂抓取炸弹
     if (armState === 'extending') {
-  // 炸弹只能机械臂抓取
+      for (var i = bombs.length - 1; i >= 0; i--) {
+        if (dist({ x: tipX, y: tipY }, bombs[i].pos) < 36) {
+          storedBombs++;
+          bombs.splice(i, 1);
+          armState = 'retracting';
+          break;
+        }
       }
     }
   } else if (armState === 'retracting') {
@@ -623,13 +629,15 @@ function update(dt) {
   for (var i = 0; i < spaceJunk.length; i++) {
     if (dist(player, spaceJunk[i].pos) < spaceJunk[i].radius + 14) { gameOver('撞到太空垃圾'); return; }
   }
-  // 炸弹只能机械臂抓取
-      }
-      spawnParticles(player.x, player.y, '#f80', 30);
+  // 碰到炸弹→储存
+  for (var i = bombs.length - 1; i >= 0; i--) {
+    if (dist(player, bombs[i].pos) < 40) {
+      storedBombs++;
+      spawnParticles(bombs[i].pos.x, bombs[i].pos.y, '#f80', 8);
       bombs.splice(i, 1);
       updateHUD();
-      // 检查是否所有活着的红外星人都死了
-      if (!redAliens.some(function(a){ return !a.dying; })) { levelWin(); return; }
+    }
+  }
     }
   }
   // ── 玩家子弹 ──
