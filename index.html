@@ -835,11 +835,9 @@ function update(dt) {
     if (p.life <= 0) particles.splice(i, 1);
   }
 
-  // ── 相机跟随（适配缩放后可视区域）──
-  var viewW = screenW / M.max(screenW / CFG.WORLD_W, screenH / CFG.WORLD_H);
-  var viewH = screenH / M.max(screenW / CFG.WORLD_W, screenH / CFG.WORLD_H);
-  camera.x = clamp(player.x - viewW / 2, 0, M.max(0, CFG.WORLD_W - viewW));
-  camera.y = clamp(player.y - viewH / 2, 0, M.max(0, CFG.WORLD_H - viewH));
+  // ── 相机跟随 ──
+  camera.x = clamp(player.x - screenW / 2, 0, CFG.WORLD_W - screenW);
+  camera.y = clamp(player.y - screenH / 2, 0, CFG.WORLD_H - screenH);
 
   // ── 补充绿色外星人 ──
   var targetGreen = M.max(1, M.floor(level / 3));
@@ -877,15 +875,6 @@ function render() {
   var now = Date.now();
   var t = gameTime;
 
-  // 世界缩放：用 max 确保铺满屏幕无黑边
-  var worldScale = M.max(screenW / CFG.WORLD_W, screenH / CFG.WORLD_H);
-  var offsetX = (screenW - CFG.WORLD_W * worldScale) / 2;
-  var offsetY = (screenH - CFG.WORLD_H * worldScale) / 2;
-
-  ctx.save();
-  ctx.translate(offsetX, offsetY);
-  ctx.scale(worldScale, worldScale);
-
   var sx = 0, sy = 0;
   if (shakeAmt > 0) {
     sx = (M.random() - 0.5) * shakeAmt * 12;
@@ -899,7 +888,7 @@ function render() {
     ctx.drawImage(images.m, -camera.x, -camera.y, CFG.WORLD_W, CFG.WORLD_H);
   } else {
     ctx.fillStyle = '#0a0030';
-    ctx.fillRect(0, 0, CFG.WORLD_W, CFG.WORLD_H);
+    ctx.fillRect(0, 0, screenW, screenH);
   }
 
   // ── 地球光环 ──
@@ -1205,21 +1194,21 @@ function render() {
     var tipX = noseX + M.cos(armAngle) * armLength;
     var tipY = noseY + M.sin(armAngle) * armLength;
 
-    // 绳索
-    ctx.strokeStyle = '#ccc';
-    ctx.lineWidth = 2;
+    // 绳索 — 黑色粗线
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 4;
     ctx.setLineDash([]);
     ctx.beginPath();
     ctx.moveTo(noseX, noseY);
     ctx.lineTo(tipX, tipY);
     ctx.stroke();
 
-    // 抓夹
+    // 抓夹 — 黑色
     var clawOpen = armState === 'extending' ? 0.6 : 0.2;
     var cs = CFG.ARM_CLAW_SIZE;
-    ctx.fillStyle = '#999';
-    ctx.strokeStyle = '#666';
-    ctx.lineWidth = 1.5;
+    ctx.fillStyle = '#333';
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = 2;
     // 左爪
     ctx.beginPath();
     ctx.moveTo(tipX, tipY);
@@ -1268,9 +1257,6 @@ function render() {
     ctx.fillText(ft.text, fts.x, fts.y);
   }
   ctx.globalAlpha = 1;
-
-  // 恢复屏幕坐标（UI 元素用屏幕坐标）
-  ctx.restore();
 
   // ── 虚拟摇杆 ──
   ctx.strokeStyle = 'rgba(255,255,255,0.25)';
