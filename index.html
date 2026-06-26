@@ -1,252 +1,1470 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="theme-color" content="#000000">
-<title>辰辰宇宙历险记</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>辰辰的宇宙历险记 🚀</title>
 <style>
-*{margin:0;padding:0;border:0;box-sizing:border-box}
-html,body{width:100%;height:100%;position:fixed;top:0;left:0;overflow:hidden;background:#000}
-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1}
-#ui{position:fixed;top:0;left:0;right:0;z-index:10;pointer-events:none;padding:8px 12px;display:flex;justify-content:space-between;padding-top:max(8px,env(safe-area-inset-top,0))}
-#ui span{background:rgba(0,0,0,0.7);color:#fff;font-size:13px;font-weight:bold;padding:5px 12px;border-radius:12px}
-#overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:999;display:flex;align-items:center;just-content:center;background:rgba(0,0,0,0.7);pointer-events:auto}
-.box{background:rgba(10,10,40,0.95);border:2px solid rgba(100,200,255,0.4);border-radius:24px;padding:30px;text-align:center;color:#fff;max-width:340px;width:85%;margin:auto}
-.box h1{font-size:32px;color:#fd4;margin-bottom:8px}
-.box p{font-size:14px;color:#9ab;line-height:1.7;margin-bottom:22px}
-#startBtn{display:inline-block;padding:18px 56px;font-size:22px;font-weight:bold;border:none;border-radius:30px;background:linear-gradient(135deg,#f62,#e30);color:#fff;cursor:pointer;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent;position:relative;z-index:9999}
-#startBtn:active{transform:scale(0.94);background:#f00}
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    overflow: hidden;
+    font-family: 'Arial', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    cursor: crosshair;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+    position: fixed;
+    width: 100vw; height: 100vh;
+    /* Prevent iOS overscroll/bounce */ overscroll-behavior: none;
+  }
+  canvas { display: block; }
+
+  #hud {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .hud-panel {
+    background: rgba(0,0,0,0.75);
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 10px;
+    padding: 6px 12px;
+    color: #fff;
+    font-size: 13px;
+    backdrop-filter: blur(10px);
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  .hud-icon { font-size: 18px; }
+  .hud-bar-bg {
+    width: 80px; height: 8px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 4px; overflow: hidden;
+  }
+  .hud-bar-fill {
+    height: 100%; border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+  .hp-fill { background: linear-gradient(90deg, #ff4444, #ff6666); }
+  .ammo-fill { background: linear-gradient(90deg, #ffaa00, #ffcc00); }
+
+  #level-info {
+    color: #00ddff;
+    font-weight: bold;
+    font-size: 12px;
+    text-shadow: 0 0 8px rgba(0,221,255,0.5);
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  #message-center {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    pointer-events: none; z-index: 20;
+    text-align: center;
+  }
+
+  .game-message {
+    color: #fff;
+    font-size: 28px;
+    font-weight: bold;
+    text-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 40px #00aaff;
+    animation: fadeInOut 2s ease forwards;
+  }
+
+  @keyframes fadeInOut {
+    0% { opacity: 0; transform: scale(0.5); }
+    20% { opacity: 1; transform: scale(1.1); }
+    30% { opacity: 1; transform: scale(1); }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  .level-msg { color: #ffdd00; text-shadow: 0 0 30px #ffdd00; }
+
+  #overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 30; pointer-events: all;
+  }
+  #overlay.hidden { display: none; }
+
+  .overlay-box {
+    background: rgba(10,10,40,0.95);
+    border: 2px solid rgba(100,200,255,0.5);
+    border-radius: 20px;
+    padding: 30px;
+    text-align: center;
+    color: #fff;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: 0 0 60px rgba(0,150,255,0.3);
+  }
+
+  .overlay-box h1 {
+    font-size: 36px; margin-bottom: 6px;
+    text-shadow: 0 0 20px #00aaff;
+    background: linear-gradient(135deg, #ffdd00, #ff8800);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .overlay-box h2 {
+    font-size: 20px; margin-bottom: 16px;
+    color: #aaddff;
+  }
+  .overlay-box .subtitle {
+    font-size: 14px; color: #88aacc; margin-bottom: 20px;
+    line-height: 1.6;
+  }
+  .overlay-box .stat {
+    font-size: 16px; margin: 6px 0;
+  }
+  .overlay-box .stat span { color: #ffdd00; font-weight: bold; }
+
+  .btn {
+    display: inline-block;
+    padding: 12px 32px;
+    margin: 6px;
+    font-size: 18px;
+    font-weight: bold;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    letter-spacing: 1px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #ff6600, #ff3300);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(255,100,0,0.4);
+  }
+  .btn-primary:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 8px rgba(255,100,0,0.5);
+  }
+  .btn-small {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .controls-info {
+    margin-top: 16px;
+    font-size: 12px;
+    color: #6688aa;
+    line-height: 1.8;
+  }
+  .controls-info kbd {
+    display: inline-block;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 4px;
+    padding: 2px 6px;
+    margin: 0 2px;
+    font-size: 11px;
+    color: #fff;
+  }
+
+  /* ==================== TOUCH CONTROLS ==================== */
+
+  /* D-Pad container - left side */
+  #dpad-area {
+    position: fixed;
+    bottom: 30px;
+    left: 20px;
+    z-index: 15;
+    width: 160px;
+    height: 160px;
+    pointer-events: auto;
+  }
+
+  .dpad-btn {
+    position: absolute;
+    width: 52px; height: 52px;
+    background: rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,255,255,0.35);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: rgba(255,255,255,0.8);
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.1s;
+    backdrop-filter: blur(4px);
+  }
+  .dpad-btn:active, .dpad-btn.active {
+    background: rgba(255,255,255,0.3);
+    border-color: rgba(255,255,255,0.7);
+    box-shadow: 0 0 15px rgba(255,255,255,0.2);
+  }
+
+  #btn-up    { top: 0;    left: 54px; }
+  #btn-down  { bottom: 0; left: 54px; }
+  #btn-left  { top: 54px;  left: 0; }
+  #btn-right { top: 54px;  right: 0; }
+
+  /* Shoot button - right side */
+  #shoot-area {
+    position: fixed;
+    bottom: 40px;
+    right: 30px;
+    z-index: 15;
+    pointer-events: auto;
+  }
+
+  #btn-shoot {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, rgba(255,80,20,0.7), rgba(200,30,0,0.5));
+    border: 3px solid rgba(255,120,60,0.7);
+    color: #fff;
+    font-size: 18px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.1s;
+    box-shadow: 0 0 30px rgba(255,60,0,0.4), inset 0 0 20px rgba(255,255,255,0.1);
+    text-shadow: 0 0 8px rgba(255,255,255,0.8);
+  }
+  #btn-shoot:active, #btn-shoot.active {
+    transform: scale(0.9);
+    background: radial-gradient(circle at 40% 35%, rgba(255,150,60,0.9), rgba(255,60,10,0.8));
+    border-color: rgba(255,200,100,0.9);
+    box-shadow: 0 0 50px rgba(255,80,0,0.7), inset 0 0 30px rgba(255,255,255,0.2);
+  }
+
+  /* Hide touch controls on desktop (optional - show on touch screens) */
+  @media (hover: hover) and (pointer: fine) {
+    #dpad-area, #shoot-area {
+      opacity: 0.35;
+    }
+    #dpad-area:hover, #shoot-area:hover {
+      opacity: 1;
+    }
+  }
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
-<div id="ui"><span id="hp">❤️100</span><span id="info">🌌第1关</span><span id="ammo">🔫100</span></div>
-<div id="overlay">
-  <div class="box">
-    <h1>🚀 辰辰宇宙历险记</h1>
-    <p>🕹️左下角摇杆控制方向<br>🔫右手按住射击·自动瞄准<br>🌍靠近地球回血<br>💀撞到外星人/陨石=结束</p>
-    <button id="startBtn">🎮 出发！</button>
+
+<div id="hud">
+  <div class="hud-panel">
+    <span class="hud-icon">❤️</span>
+    <div class="hud-bar-bg"><div class="hud-bar-fill hp-fill" id="hp-bar" style="width:100%"></div></div>
+    <span id="hp-text">100</span>
+  </div>
+
+  <div id="level-info">🌌 第 1 关</div>
+
+  <div class="hud-panel">
+    <span class="hud-icon">🔫</span>
+    <div class="hud-bar-bg"><div class="hud-bar-fill ammo-fill" id="ammo-bar" style="width:100%"></div></div>
+    <span id="ammo-text">100</span>
   </div>
 </div>
 
+<div id="message-center"></div>
+
+<div id="overlay">
+  <div class="overlay-box" id="overlay-content"></div>
+</div>
+
+<!-- TOUCH CONTROLS -->
+<div id="dpad-area">
+  <button class="dpad-btn" id="btn-up"    ontouchstart="return false">▲</button>
+  <button class="dpad-btn" id="btn-down"  ontouchstart="return false">▼</button>
+  <button class="dpad-btn" id="btn-left"  ontouchstart="return false">◀</button>
+  <button class="dpad-btn" id="btn-right" ontouchstart="return false">▶</button>
+</div>
+<div id="shoot-area">
+  <button id="btn-shoot" ontouchstart="return false">射 击</button>
+</div>
+
+<canvas id="game"></canvas>
+
 <script>
-// === GAME ENGINE ===
-var W,Wr,H,Hr,EARTH,PLANETS;
-function setupWorld(w,h){W=w;H=h;EARTH={x:W*0.5,y:H*0.63,r:H*0.08};PLANETS=[{x:W*0.16,y:H*0.26,r:W*0.03},{x:W*0.84,y:H*0.37,r:W*0.035},{x:W*0.32,y:H*0.72,r:W*0.025},{x:W*0.76,y:H*0.78,r:W*0.027},{x:W*0.5,y:H*0.18,r:W*0.023},{x:W*0.62,y:H*0.55,r:W*0.021}]}
-var M=Math;
-var cv,ctx,Wr,Hr,imgs={},pl,reds=[],grns=[],jnk=[],cmt=[],bls=[],ebl=[],pks=[],pts=[];
-var cam={x:0,y:0},lt=0,ls=0,stg='title',lv=1,sc=0,mshoot=false;
-var joy={cx:130,cy:300,r:90,on:false,dx:0,dy:0};
-var tm=0,shk=0,nk=0,nc=0;
+// ==================== GAME ENGINE ====================
 
-function dist(a,b){return M.hypot(a.x-b.x,a.y-b.y)}
-function ang(a,b){return M.atan2(b.y-a.y,b.x-a.x)}
-function rnd(a,b){return a+M.random()*(b-a)}
-function edge(){var m=50,s=M.floor(M.random()*4);if(s===0)return{x:rnd(m,W-m),y:-m};if(s===1)return{x:rnd(m,W-m),y:H+m};if(s===2)return{x:-m,y:rnd(m,H-m)};return{x:W+m,y:rnd(m,H-m)}}
-function nearEarth(p){return dist(p,EARTH)<EARTH.r}
-function pt(x,y,c,n){for(var i=0;i<n;i++){var a=M.random()*M.PI*2;pts.push({x,y,vx:M.cos(a)*rnd(1,5),vy:M.sin(a)*rnd(1,5),l:1,d:rnd(0.02,0.06),c:c,s:rnd(1.5,5)})}}
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
 
-function startGame(){
-  document.getElementById('overlay').style.display='none';
-  pl={x:W*0.5,y:H*0.55,hp:100,ammo:100,h:-M.PI/2,spd:3.5,inv:Date.now()+2000,boost:0};
-  reds=[];grns=[];jnk=[];cmt=[];bls=[];ebl=[];pks=[];pts=[];
-  ls=0;sc=0;lv=1;stg='play';tm=0;shk=0;
-  initLv(1);
+// --- Image assets ---
+const ASSET_PATHS = {
+  player: '主角.png',
+  map: '大地图.png',
+  redAlien: '红色外星人.png',
+  greenAlien: '绿色外星人.png',
+};
+
+const images = {};
+let assetsLoaded = 0;
+const totalAssets = Object.keys(ASSET_PATHS).length;
+
+function loadImage(key, path) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => { images[key] = img; assetsLoaded++; resolve(); };
+    img.onerror = () => { console.warn(`Failed to load: ${path}`); assetsLoaded++; resolve(); };
+    img.src = path;
+  });
 }
-function updateHUD(){
-  if(!pl)return;
-  document.getElementById('hp').textContent='❤️'+M.max(0,M.round(pl.hp));
-  document.getElementById('ammo').textContent='🔫'+pl.ammo;
-  document.getElementById('info').textContent='🌌第'+lv+'关 👾'+reds.length+' ⭐'+sc;
+
+// --- Game State ---
+const WORLD_W = 2732;
+const WORLD_H = 1534;
+
+// Earth position (center area of the big map — home base)
+const EARTH = { x: WORLD_W * 0.5, y: WORLD_H * 0.65, radius: 180 };
+
+// Planet collision zones (avoid these!)
+const PLANETS = [
+  { x: WORLD_W * 0.15, y: WORLD_H * 0.25, radius: 60 },
+  { x: WORLD_W * 0.85, y: WORLD_H * 0.35, radius: 70 },
+  { x: WORLD_W * 0.3,  y: WORLD_H * 0.7,  radius: 50 },
+  { x: WORLD_W * 0.75, y: WORLD_H * 0.75, radius: 55 },
+  { x: WORLD_W * 0.5,  y: WORLD_H * 0.2,  radius: 45 },
+];
+
+const PLAYER_SPRITE_SIZE = 70;
+const ALIEN_SPRITE_W = 50;
+const ALIEN_SPRITE_H = 28;
+const BULLET_SPEED_PLAYER = 9;
+const BULLET_SPEED_ENEMY = 5;
+const PLAYER_SPEED = 5;
+const RED_ALIEN_SPEED = 1.8;
+const GREEN_ALIEN_SPEED = 2.2;
+const RED_ALIEN_HP = 9;
+const RED_ALIEN_DMG = 10;  // 1/10 of max HP
+const PLAYER_DMG = 3;
+const PLAYER_MAX_HP = 100;
+const PLAYER_MAX_AMMO = 100;
+const HEAL_RATE = 10;
+const RED_SHOOT_COOLDOWN = 1500;
+const PLAYER_SHOOT_COOLDOWN = 200;
+const PLAYER_INVINCIBLE_MS = 500;
+const JUNK_HP = 3;
+const JUNK_SPEED = 0.8;
+const JUNK_DMG = 10;
+const JUNK_SIZE = 18;
+
+let gameState = 'title';
+let level = 1;
+let score = 0;
+let player = null;
+let redAliens = [];
+let greenAliens = [];
+let playerBullets = [];
+let enemyBullets = [];
+let energyPacks = [];
+let spaceJunk = [];
+let particles = [];
+let messages = [];
+let keys = {};
+let mouse = { x: 0, y: 0, down: false };
+let camera = { x: 0, y: 0 };
+let lastTime = 0;
+let playerLastShot = 0;
+let redAliensKilledThisLevel = 0;
+let redAliensToKill = 0;
+
+// Touch state
+let touchDPad = { up: false, down: false, left: false, right: false };
+let touchShoot = false;
+
+// --- Helper Functions ---
+function dist(a, b) {
+  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
-function lvCfg(lv){return{mx:3+(lv-1)*2,sp:0.5+lv*0.2,hp:lv<=3?9:lv<=6?12:lv<=10?15:21,cd:M.max(600,1800-lv*100),jc:2+lv}}
-function initLv(lv){
-  var i,cfg=lvCfg(lv);
-  reds=[];for(i=0;i<cfg.mx;i++)reds.push({p:edge(),hp:cfg.hp,mhp:cfg.hp,ls:Date.now()+rnd(0,1500),cd:cfg.cd+rnd(-200,300),br:rnd(0,M.PI*2),ag:0,spd:cfg.sp});
-  var gc=M.max(1,M.floor(lv/3));
-  grns=[];for(i=0;i<gc;i++)grns.push({p:edge(),wa:rnd(0,M.PI*2),wt:Date.now()+rnd(1000,3500),ea:rnd(0,1)<0.5?20:50,bc:rnd(0,M.PI*2),hp:0,spd:cfg.sp*0.8});
-  var jsp=0.1+lv*0.06;
-  jnk=[];for(i=0;i<cfg.jc;i++)jnk.push({p:{x:rnd(60,W-60),y:rnd(60,H-60)},r:rnd(10,20),rt:rnd(0,M.PI*2),rs:rnd(-0.02,0.02),df:rnd(0,M.PI*2),ds:rnd(jsp*0.5,jsp)});
-  cmt=[];bls=[];ebl=[];pks=[];pts=[];
-  nk=Date.now()+rnd(8000,15000);nc=Date.now()+rnd(4000,8000);
+
+function angleBetween(a, b) {
+  return Math.atan2(b.y - a.y, b.x - a.x);
+}
+
+function randomInRange(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function randomEdgePosition() {
+  // Spawn from the edges of the visible screen (phone screen edges), not world edges
+  const side = Math.floor(Math.random() * 4);
+  const margin = 60;
+  const screenW = canvas.width;
+  const screenH = canvas.height;
+  const cx = camera.x;
+  const cy = camera.y;
+  const screenCX = cx + screenW / 2;
+  const screenCY = cy + screenH / 2;
+  let x, y;
+  switch (side) {
+    case 0: x = cx + randomInRange(-margin, screenW + margin); y = cy - margin; break;
+    case 1: x = cx + randomInRange(-margin, screenW + margin); y = cy + screenH + margin; break;
+    case 2: x = cx - margin; y = cy + randomInRange(-margin, screenH + margin); break;
+    case 3: x = cx + screenW + margin; y = cy + randomInRange(-margin, screenH + margin); break;
+  }
+  const inwardAngle = Math.atan2(screenCY - y, screenCX - x);
+  return { x, y, inwardAngle };
+}
+
+function isNearEarth(pos) {
+  return dist(pos, EARTH) < EARTH.radius;
+}
+
+function isOnPlanet(pos) {
+  for (const p of PLANETS) {
+    if (dist(pos, p) < p.radius + 15) return true;
+  }
+  return false;
+}
+
+function showMessage(text, className = '') {
+  messages.push({ text, className, time: performance.now(), duration: 2000 });
+  const center = document.getElementById('message-center');
+  const div = document.createElement('div');
+  div.className = 'game-message ' + className;
+  div.textContent = text;
+  center.appendChild(div);
+  setTimeout(() => div.remove(), 2200);
+}
+
+// --- Particle System ---
+function spawnParticles(x, y, color, count = 10) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = randomInRange(1, 5);
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: randomInRange(0.02, 0.06),
+      color,
+      size: randomInRange(1.5, 4),
+    });
+  }
+}
+
+// --- Reset / Initialize ---
+function resetPlayer() {
+  return {
+    x: WORLD_W * 0.5,
+    y: WORLD_H * 0.55,
+    hp: PLAYER_MAX_HP,
+    ammo: PLAYER_MAX_AMMO,
+    invincibleUntil: 0,
+  };
+}
+
+function spawnRedAlien() {
+  return {
+    ...randomEdgePosition(),
+    hp: RED_ALIEN_HP,
+    maxHp: RED_ALIEN_HP,
+    lastShot: performance.now() + randomInRange(0, RED_SHOOT_COOLDOWN),
+    shootCooldown: RED_SHOOT_COOLDOWN + randomInRange(-300, 500),
+  };
+}
+
+function spawnGreenAlien() {
+  const pos = randomEdgePosition();
+  return {
+    x: pos.x, y: pos.y,
+    wanderAngle: pos.inwardAngle,
+    wanderTimer: performance.now() + randomInRange(1000, 3000),
+    energyAmount: Math.random() < 0.5 ? 20 : 50,
+  };
+}
+
+function spawnSpaceJunk() {
+  const pos = randomEdgePosition();
+  return {
+    x: pos.x, y: pos.y,
+    hp: JUNK_HP,
+    maxHp: JUNK_HP,
+    angle: pos.inwardAngle,
+    rotSpeed: randomInRange(-0.03, 0.03),
+    shape: [], // irregular polygon, generated once
+  };
+}
+
+function initLevel(lvl) {
+  const baseCount = 3;
+  const count = baseCount + (lvl - 1) * 2;
+  const greenCount = Math.max(1, Math.floor(lvl / 2));
+
+  redAliens = [];
+  for (let i = 0; i < count; i++) {
+    redAliens.push(spawnRedAlien());
+  }
+  redAliensKilledThisLevel = 0;
+  redAliensToKill = count;
+
+  greenAliens = [];
+  for (let i = 0; i < greenCount; i++) {
+    greenAliens.push(spawnGreenAlien());
+  }
+
+  const junkCount = Math.min(2 + lvl, 8);
+  spaceJunk = [];
+  for (let i = 0; i < junkCount; i++) {
+    spaceJunk.push(spawnSpaceJunk());
+  }
+
+  playerBullets = [];
+  enemyBullets = [];
+  energyPacks = [];
+  particles = [];
+}
+
+function startGame() {
+  level = 1;
+  score = 0;
+  player = resetPlayer();
+  initLevel(1);
+  gameState = 'playing';
+  document.getElementById('overlay').classList.add('hidden');
   updateHUD();
 }
-function fire(now,force){
-  if(!pl||pl.ammo<=0||now-ls<60||!force)return;
-  ls=now;pl.ammo--;
-  var fa=pl.h,bestD=9999;
-  for(var i=0;i<reds.length;i++){var d=dist(pl,reds[i].p);if(d<bestD){bestD=d;fa=ang(pl,reds[i].p)}}
-  for(var i=0;i<jnk.length;i++){var d=dist(pl,jnk[i].p);if(d<bestD){bestD=d;fa=ang(pl,jnk[i].p)}}
-  bls.push({p:{x:pl.x,y:pl.y},vx:M.cos(fa)*14,vy:M.sin(fa)*14,l:50});
+
+function nextLevel() {
+  level++;
+  player = { ...player, hp: player.hp, ammo: player.ammo, invincibleUntil: 0 };
+  player.hp = Math.min(PLAYER_MAX_HP, player.hp + 30);
+  player.ammo = Math.min(PLAYER_MAX_AMMO, player.ammo + 30);
+  initLevel(level);
+  gameState = 'playing';
+  document.getElementById('overlay').classList.add('hidden');
+  showMessage(`🌌 第 ${level} 关 — 迎战 ${redAliensToKill} 个外星人！`, 'level-msg');
   updateHUD();
 }
-function spawnComet(){
-  var s=M.floor(M.random()*4),x,y,dir;
-  if(s===0){x=rnd(0,W);y=-30;dir=rnd(M.PI*0.3,M.PI*0.7)}
-  else if(s===1){x=rnd(0,W);y=H+30;dir=rnd(-M.PI*0.7,-M.PI*0.3)}
-  else if(s===2){x=-30;y=rnd(0,H);dir=rnd(-M.PI*0.3,M.PI*0.3)}
-  else{x=W+30;y=rnd(0,H);dir=rnd(M.PI*0.7,M.PI*1.3)}
-  cmt.push({p:{x,y},vx:M.cos(dir)*rnd(2,4),vy:M.sin(dir)*rnd(2,4),r:rnd(8,14),l:300});
-}
-function over(s){
-  stg='over';
-  document.getElementById('overlay').style.display='flex';
-  document.getElementById('overlay').innerHTML='<div class="box"><h1>💀 挑战失败</h1><p>'+s+'<br>第'+lv+'关 · 得分'+sc+'</p><button id="startBtn">🔄 重新开始</button></div>';
-  document.getElementById('startBtn').addEventListener('click',startGame);
-  document.getElementById('startBtn').addEventListener('touchend',function(e){e.preventDefault();startGame()});
-}
-function win(){
-  sc+=lv*200;
-  setTimeout(function(){
-    lv++;pl.hp=M.min(100,pl.hp+30);pl.ammo=M.min(100,pl.ammo+30);pl.inv=Date.now()+5000;pl.spd=3.5;pl.boost=0;
-    initLv(lv);stg='play';updateHUD();
-  },1500);
+
+function gameOver(reason) {
+  gameState = 'gameover';
+  const overlay = document.getElementById('overlay');
+  overlay.classList.remove('hidden');
+  document.getElementById('overlay-content').innerHTML = `
+    <h1>💥 游戏结束</h1>
+    <h2>${reason}</h2>
+    <div class="stat">关卡：<span>第 ${level} 关</span></div>
+    <div class="stat">得分：<span>${score}</span></div>
+    <div class="stat">击毁外星人：<span>${redAliensKilledThisLevel}</span></div>
+    <br>
+    <button class="btn btn-primary" onclick="startGame()">🔄 重新开始</button>
+  `;
 }
 
-function update(dt){
-  if(stg!=='play')return;
-  var now=Date.now();tm+=dt;if(shk>0)shk=M.max(0,shk-dt/200);
-  if(joy.on&&(joy.dx||joy.dy))pl.h=M.atan2(joy.dy,joy.dx);
-  pl.x+=M.cos(pl.h)*pl.spd*(dt/16);pl.y+=M.sin(pl.h)*pl.spd*(dt/16);
-  pl.x=M.max(25,M.min(W-25,pl.x));pl.y=M.max(25,M.min(H-25,pl.y));
-  if(now>pl.boost){if(pl.spd>3.5)pl.spd=M.max(3.5,pl.spd-0.025*(dt/16));else pl.spd=M.max(1.6,pl.spd-0.008*(dt/16))}
-  if(now>pl.boost&&pl.spd>3.5)pl.spd=M.max(3.5,pl.spd-0.03*(dt/16));
-  if(nearEarth(pl)){pl.hp=M.min(100,pl.hp+10*(dt/1000));updateHUD()}
-  if(mshoot)fire(now,true);
-  for(var i=0;i<reds.length;i++)if(dist(pl,reds[i].p)<32){over('撞到红色外星人');return}
-  for(var i=0;i<grns.length;i++)if(dist(pl,grns[i].p)<32){over('撞到绿色外星人');return}
-  for(var i=0;i<jnk.length;i++)if(dist(pl,jnk[i].p)<jnk[i].r+14){over('撞到太空垃圾');return}
-  for(var i=cmt.length-1;i>=0;i--)if(dist(pl,cmt[i].p)<cmt[i].r+16){over('被陨石撞毁');return}
-  for(var i=bls.length-1;i>=0;i--){var b=bls[i];b.p.x+=b.vx*(dt/16);b.p.y+=b.vy*(dt/16);b.l--;if(b.p.x<-60||b.p.x>W+60||b.p.y<-60||b.p.y>H+60||b.l<=0){bls.splice(i,1);continue}
-    var hit=false;
-    for(var j=reds.length-1;j>=0&&!hit;j--){var a=reds[j];if(dist(b.p,a.p)<38){a.hp-=3;pt(b.p.x,b.p.y,'#f64',8);hit=true;
-      if(a.hp<=0){pt(a.p.x,a.p.y,'#f84',25);reds.splice(j,1);sc+=100;updateHUD();if(!reds.length){sc+=lv*200;win();return}}}}
-    if(!hit)for(var j=0;j<grns.length;j++)if(dist(b.p,grns[j].p)<38){over('误伤绿色好朋友');return}
-    if(!hit)for(var j=jnk.length-1;j>=0;j--)if(dist(b.p,jnk[j].p)<jnk[j].r+10){pt(jnk[j].p.x,jnk[j].p.y,'#aac',10);jnk.splice(j,1);hit=true;break}
-    if(hit)bls.splice(i,1);
-  }
-  for(var i=ebl.length-1;i>=0;i--){var b=ebl[i];b.p.x+=b.vx*(dt/16);b.p.y+=b.vy*(dt/16);b.l--;if(b.p.x<-60||b.p.x>W+60||b.p.y<-60||b.p.y>H+60||b.l<=0){ebl.splice(i,1);continue}
-    if(now>pl.inv&&dist(b.p,pl)<30){pl.hp-=2;pl.inv=now+600;pt(pl.x,pl.y,'#f33',10);ebl.splice(i,1);updateHUD();if(pl.hp<=0){over('火箭被击毁');return}}}
-  for(var i=0;i<reds.length;i++){var a=reds[i],asp=a.spd||1.05;
-    if(dist(a.p,EARTH)<EARTH.r+40){var ea=ang(EARTH,a.p);a.p.x+=M.cos(ea)*1.5*(dt/16);a.p.y+=M.sin(ea)*1.5*(dt/16)}
-    else{var ag2=ang(a.p,pl);a.p.x+=M.cos(ag2)*asp*(dt/16);a.p.y+=M.sin(ag2)*asp*(dt/16)}
-    a.p.x=M.max(35,M.min(W-35,a.p.x));a.p.y=M.max(35,M.min(H-35,a.p.y));a.br+=dt/300;a.ag=M.max(0,a.ag-dt/400);
-    if(now-a.ls>=a.cd){a.ls=now;ebl.push({p:{x:a.p.x,y:a.p.y},vx:M.cos(ang(a.p,pl))*3.5,vy:M.sin(ang(a.p,pl))*3.5,l:110})}
-  }
-  for(var i=0;i<grns.length;i++){var g=grns[i],gsp=g.spd||1.7;
-    if(dist(g.p,EARTH)<EARTH.r+40){var ea=ang(EARTH,g.p);g.p.x+=M.cos(ea)*1.5*(dt/16);g.p.y+=M.sin(ea)*1.5*(dt/16)}
-    else{if(now>g.wt){g.wa=rnd(0,M.PI*2);g.wt=now+rnd(1000,3500)}g.p.x+=M.cos(g.wa)*gsp*(dt/16);g.p.y+=M.sin(g.wa)*gsp*(dt/16)}
-    g.p.x=M.max(35,M.min(W-35,g.p.x));g.p.y=M.max(35,M.min(H-35,g.p.y));
-    if(pl.ammo<40&&dist(g.p,pl)<110&&M.random()<0.004*(dt/16)){pks.push({p:{x:g.p.x,y:g.p.y},tp:'ammo',l:600,vy:-0.5});var ep=edge();g.p.x=ep.x;g.p.y=ep.y}
-  }
-  if(now>nk){var ts=['boost','ammo','ammo'];pks.push({p:{x:rnd(80,W-80),y:rnd(80,H-80)},tp:ts[M.floor(M.random()*3)],l:650,vy:-0.3});nk=now+rnd(5000,12000)}
-  for(var i=pks.length-1;i>=0;i--){var pk=pks[i];pk.p.y+=pk.vy*(dt/16);pk.l--;
-    if(dist(pk.p,pl)<28){if(pk.tp==='ammo'){pl.ammo=M.min(100,pl.ammo+(pl.ammo<50?50:20))}else{pl.spd=7;pl.boost=now+3000}pks.splice(i,1);updateHUD();continue}
-    if(pk.l<=0||pk.p.y>H+60)pks.splice(i,1)}
-  for(var i=0;i<jnk.length;i++){var j=jnk[i];j.p.x+=M.cos(j.df)*j.ds*(dt/16);j.p.y+=M.sin(j.df)*j.ds*(dt/16);if(j.p.x<15||j.p.x>W-15)j.df=M.PI-j.df;if(j.p.y<15||j.p.y>H-15)j.df=-j.df;j.p.x=M.max(15,M.min(W-15,j.p.x));j.p.y=M.max(15,M.min(H-15,j.p.y));j.rt+=j.rs*(dt/16)}
-  if(lv>=4){if(now>nc){var ct=M.max(1,M.floor((lv-2)/2));if(cmt.length<ct+1)spawnComet();nc=now+rnd(3000,6000)}
-    for(var i=cmt.length-1;i>=0;i--){var cm=cmt[i];cm.p.x+=cm.vx*(dt/16);cm.p.y+=cm.vy*(dt/16);cm.l--;if(cm.l<=0||cm.p.x<-100||cm.p.x>W+100||cm.p.y<-100||cm.p.y>H+100)cmt.splice(i,1)}}
-  for(var i=pts.length-1;i>=0;i--){var p=pts[i];p.x+=p.vx*(dt/16);p.y+=p.vy*(dt/16);p.l-=p.d*(dt/16);if(p.l<=0)pts.splice(i,1)}
-  cam.x=pl.x-Wr/2;cam.y=pl.y-Hr/2;cam.x=M.max(0,M.min(W-Wr,cam.x));cam.y=M.max(0,M.min(H-Hr,cam.y));
-  var tg=M.max(1,M.floor(lv/3));if(grns.length<tg&&M.random()<0.004*(dt/16))grns.push({p:edge(),wa:rnd(0,M.PI*2),wt:Date.now()+rnd(1000,3500),ea:rnd(0,1)<0.5?20:50,bc:rnd(0,M.PI*2),hp:0,spd:lvCfg(lv).sp*0.8});
-  pl.hp=M.max(0,M.min(100,pl.hp));pl.ammo=M.max(0,M.min(100,pl.ammo));pl.spd=M.max(1.6,M.min(7,pl.spd));
+function levelComplete() {
+  gameState = 'levelComplete';
+  const overlay = document.getElementById('overlay');
+  overlay.classList.remove('hidden');
+  document.getElementById('overlay-content').innerHTML = `
+    <h1>🎉 关卡完成！</h1>
+    <h2>第 ${level} 关 通过 ✅</h2>
+    <div class="stat">得分：<span>${score}</span></div>
+    <div class="stat">血量：<span>${Math.round(player.hp)}</span></div>
+    <div class="stat">弹药：<span>${player.ammo}</span></div>
+    <div class="stat">下关敌人：<span>${3 + level * 2} 个</span></div>
+    <br>
+    <button class="btn btn-primary" onclick="nextLevel()">▶️ 进入第 ${level + 1} 关</button>
+    <br>
+    <button class="btn btn-primary btn-small" onclick="startGame()">🔄 重新开始</button>
+  `;
 }
 
-function render(){
-  ctx.clearRect(0,0,Wr,Hr);var now=Date.now(),t=tm;
-  var sx=0,sy=0;if(shk>0){sx=(M.random()-0.5)*shk*12;sy=(M.random()-0.5)*shk*12}
-  var w2s=function(wx,wy){return{x:wx-cam.x+sx,y:wy-cam.y+sy}};
-  if(imgs.m)ctx.drawImage(imgs.m,-cam.x,-cam.y,W,H);
-  else{ctx.fillStyle='#0a0030';ctx.fillRect(0,0,Wr,Hr)}
-  var es=w2s(EARTH.x,EARTH.y);var g=ctx.createRadialGradient(es.x,es.y,EARTH.r*0.3,es.x,es.y,EARTH.r*1.5);g.addColorStop(0,'rgba(100,220,255,0.15)');g.addColorStop(1,'rgba(0,100,200,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(es.x,es.y,EARTH.r*1.5,0,M.PI*2);ctx.fill();
-  for(var i=0;i<PLANETS.length;i++){var ps=w2s(PLANETS[i].x,PLANETS[i].y);ctx.strokeStyle='rgba(255,120,60,0.3)';ctx.lineWidth=2;ctx.setLineDash([6,10]);ctx.beginPath();ctx.arc(ps.x,ps.y,PLANETS[i].r,0,M.PI*2);ctx.stroke();ctx.setLineDash([])}
-  for(var i=0;i<jnk.length;i++){var jk=jnk[i],js=w2s(jk.p.x,jk.p.y);ctx.save();ctx.translate(js.x,js.y);ctx.rotate(jk.rt);ctx.fillStyle='#111';ctx.strokeStyle='#333';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-jk.r,0);ctx.lineTo(-jk.r*0.3,-jk.r*0.6);ctx.lineTo(jk.r*0.5,-jk.r*0.3);ctx.lineTo(jk.r,jk.r*0.2);ctx.lineTo(jk.r*0.4,jk.r*0.5);ctx.lineTo(-jk.r*0.5,jk.r*0.7);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore()}
-  for(var i=0;i<cmt.length;i++){var cm=cmt[i],cs=w2s(cm.p.x,cm.p.y);var ca=M.atan2(cm.vy,cm.vx);ctx.save();ctx.translate(cs.x,cs.y);ctx.rotate(ca);var tl=ctx.createLinearGradient(-30,0,-cm.r,0);tl.addColorStop(0,'rgba(255,200,100,0)');tl.addColorStop(0.5,'rgba(255,150,50,0.6)');tl.addColorStop(1,'rgba(255,200,80,1)');ctx.fillStyle=tl;ctx.beginPath();ctx.moveTo(-cm.r,0);ctx.lineTo(-35,-cm.r*0.4);ctx.lineTo(-35,cm.r*0.4);ctx.closePath();ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,0,cm.r*0.6,0,M.PI*2);ctx.fill();ctx.restore()}
-  for(var i=0;i<pks.length;i++){var pk=pks[i],ps=w2s(pk.p.x,pk.p.y),bob=M.sin(pk.l*0.1)*6,py=ps.y+bob;
-    if(pk.tp==='boost'){ctx.fillStyle='#fd0';ctx.beginPath();ctx.arc(ps.x,py,14,0,M.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 16px sans-serif';ctx.textAlign='center';ctx.fillText('⚡',ps.x,py+5)}
-    else{ctx.fillStyle='#4f8';ctx.beginPath();ctx.arc(ps.x,py,12,0,M.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.fillText('🔫',ps.x,py+4)}
-  }
-  for(var i=0;i<bls.length;i++){var bs=w2s(bls[i].p.x,bls[i].p.y);ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bs.x,bs.y,5,0,M.PI*2);ctx.fill()}
-  for(var i=0;i<ebl.length;i++){var bs=w2s(ebl[i].p.x,ebl[i].p.y);ctx.fillStyle='#f44';ctx.beginPath();ctx.arc(bs.x,bs.y,4,0,M.PI*2);ctx.fill()}
-  for(var i=0;i<reds.length;i++){var a=reds[i],as=w2s(a.p.x,a.p.y);
-    if(imgs.r){ctx.save();ctx.translate(as.x,as.y);ctx.rotate(ang(a.p,pl)+M.PI/2);ctx.drawImage(imgs.r,-40,-22,80,44);ctx.restore()}
-    else{ctx.fillStyle='#f33';ctx.beginPath();ctx.arc(as.x,as.y,18,0,M.PI*2);ctx.fill()}
-    ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(as.x-14,as.y-26,28,4);ctx.fillStyle=a.hp/a.mhp>0.5?'#5f5':a.hp/a.mhp>0.25?'#fa3':'#f33';ctx.fillRect(as.x-14,as.y-26,28*(a.hp/a.mhp),4);
-  }
-  for(var i=0;i<grns.length;i++){var g2=grns[i],gs=w2s(g2.p.x,g2.p.y);
-    if(imgs.g){ctx.save();ctx.translate(gs.x,gs.y);ctx.rotate(g2.wa+M.PI/2);ctx.drawImage(imgs.g,-40,-22,80,44);ctx.restore()}
-    else{ctx.fillStyle='#4f4';ctx.beginPath();ctx.arc(gs.x,gs.y,18,0,M.PI*2);ctx.fill()}
-    ctx.strokeStyle='rgba(80,255,130,0.4)';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(gs.x,gs.y,26,0,M.PI*2);ctx.stroke();ctx.setLineDash([]);
-  }
-  // Player rocket - always visible, no blinking
-  if(pl){var ps=w2s(pl.x,pl.y);
-    if(imgs.p){ctx.save();ctx.translate(ps.x,ps.y);ctx.rotate(pl.h+M.PI/2);
-      var fl=M.abs(M.sin(t/60))*0.5+0.5;ctx.fillStyle='rgba(255,136,0,0.8)';ctx.beginPath();ctx.moveTo(-8,35);ctx.lineTo(0,35+28*fl);ctx.lineTo(8,35);ctx.closePath();ctx.fill();
-      ctx.drawImage(imgs.p,-50,-50,100,100);ctx.restore()}
-    // Shield ring during invincibility
-    if(now<pl.inv){ctx.strokeStyle='rgba(100,200,255,'+(0.4+M.sin(now/30)*0.3)+')';ctx.lineWidth=5;ctx.beginPath();ctx.arc(ps.x,ps.y,36,0,M.PI*2);ctx.stroke()}
-    ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(ps.x-18,ps.y-36,36,5);ctx.fillStyle=pl.hp>50?'#4f4':pl.hp>25?'#fa3':'#f33';ctx.fillRect(ps.x-18,ps.y-36,36*(pl.hp/100),5);
-  }
-  for(var i=0;i<pts.length;i++){var p2=pts[i],ps3=w2s(p2.x,p2.y);ctx.globalAlpha=p2.l;ctx.fillStyle=p2.c;ctx.beginPath();ctx.arc(ps3.x,ps3.y,p2.s*p2.l,0,M.PI*2);ctx.fill()}ctx.globalAlpha=1;
-  ctx.strokeStyle='rgba(255,255,255,0.25)';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(joy.cx,joy.cy,joy.r,0,M.PI*2);ctx.stroke();ctx.setLineDash([]);
-  if(joy.on&&(joy.dx||joy.dy)){var ja=M.atan2(joy.dy,joy.dx),jl=M.min(joy.r,M.hypot(joy.dx,joy.dy)*0.8);ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=3;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(joy.cx,joy.cy);ctx.lineTo(joy.cx+M.cos(ja)*jl,joy.cy+M.sin(ja)*jl);ctx.stroke();ctx.fillStyle='rgba(255,255,255,0.5)';ctx.beginPath();ctx.arc(joy.cx+joy.dx*0.6,joy.cy+joy.dy*0.6,14,0,M.PI*2);ctx.fill()}
+// --- HUD ---
+function updateHUD() {
+  if (!player) return;
+  const hpPct = Math.max(0, player.hp / PLAYER_MAX_HP * 100);
+  const ammoPct = Math.max(0, player.ammo / PLAYER_MAX_AMMO * 100);
+
+  document.getElementById('hp-bar').style.width = hpPct + '%';
+  document.getElementById('hp-text').textContent = Math.max(0, Math.round(player.hp));
+  document.getElementById('ammo-bar').style.width = ammoPct + '%';
+  document.getElementById('ammo-text').textContent = player.ammo;
+  document.getElementById('level-info').innerHTML =
+    `🌌 第 ${level} 关<br>敌人 ${redAliens.length} | 分 ${score}`;
 }
 
-function loop(ts){if(!lt)lt=ts;var dt=ts-lt;lt=ts;if(dt>120)dt=120;update(dt);render();requestAnimationFrame(loop)}
+// ==================== TOUCH CONTROLS SETUP ====================
 
-// === INIT ===
-cv=document.getElementById('c');ctx=cv.getContext('2d');
-function resize(){Wr=window.innerWidth;Hr=window.innerHeight;cv.width=Wr;cv.height=Hr;setupWorld(Wr,Hr);joy.cy=Hr-140}
-resize();window.addEventListener('resize',resize);
+const btnUp    = document.getElementById('btn-up');
+const btnDown  = document.getElementById('btn-down');
+const btnLeft  = document.getElementById('btn-left');
+const btnRight = document.getElementById('btn-right');
+const btnShoot = document.getElementById('btn-shoot');
 
-// Load images
-var list={p:'主角.png',m:'大地图.png',r:'红色外星人.png',g:'绿色外星人.png'};
-var keys=Object.keys(list),n=0;
-for(var k in list){(function(kk){
-  var img=new Image();imgs[kk]=null;
-  img.onload=function(){imgs[kk]=img;n++;if(n>=keys.length){lt=Date.now();loop()}};
-  img.onerror=function(){n++;if(n>=keys.length){lt=Date.now();loop()}};
-  img.src=list[kk];
-})(k)}
+// Map touch identifiers to directions
+const activeTouches = new Map(); // touchId -> { type: 'up'|'down'|'left'|'right'|'shoot' }
 
-// === BUTTON: multiple event types for compatibility ===
-var btn=document.getElementById('startBtn');
-btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();startGame()});
-btn.addEventListener('touchend',function(e){e.preventDefault();e.stopPropagation();startGame()});
-btn.addEventListener('touchstart',function(e){e.preventDefault();e.stopPropagation()});
+function getTouchTarget(touch) {
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  if (!el) return null;
+  if (el === btnUp || btnUp.contains(el)) return 'up';
+  if (el === btnDown || btnDown.contains(el)) return 'down';
+  if (el === btnLeft || btnLeft.contains(el)) return 'left';
+  if (el === btnRight || btnRight.contains(el)) return 'right';
+  if (el === btnShoot || btnShoot.contains(el)) return 'shoot';
+  return null;
+}
 
-// Force hide white borders
-try{document.body.scrollIntoView()}catch(e){}
-
-// === TOUCH for joystick & shoot ===
-cv.addEventListener('touchstart',function(e){e.preventDefault();
-  if(stg!=='play')return;
-  for(var i=0;i<e.touches.length;i++){var t=e.touches[i];
-    if(t.clientX<Wr*0.4&&t.clientY>Hr*0.5){var dx=t.clientX-joy.cx,dy=t.clientY-joy.cy;if(M.hypot(dx,dy)<joy.r*1.5){joy.on=true;joy.dx=dx;joy.dy=dy}}
-    else{mshoot=true}
+function activateButton(type) {
+  switch (type) {
+    case 'up':    touchDPad.up = true;    btnUp.classList.add('active');    break;
+    case 'down':  touchDPad.down = true;  btnDown.classList.add('active');  break;
+    case 'left':  touchDPad.left = true;  btnLeft.classList.add('active');  break;
+    case 'right': touchDPad.right = true; btnRight.classList.add('active'); break;
+    case 'shoot': touchShoot = true;      btnShoot.classList.add('active'); break;
   }
-},{passive:false});
-cv.addEventListener('touchmove',function(e){e.preventDefault();
-  if(stg!=='play')return;var hasL=false,hasR=false;
-  for(var i=0;i<e.touches.length;i++){var t=e.touches[i];
-    if(t.clientX<Wr*0.4&&t.clientY>Hr*0.5){var dx=t.clientX-joy.cx,dy=t.clientY-joy.cy;if(M.hypot(dx,dy)<joy.r*1.5){hasL=true;joy.dx=dx;joy.dy=dy}}
-    else{hasR=true}
+}
+
+function deactivateButton(type) {
+  switch (type) {
+    case 'up':    touchDPad.up = false;    btnUp.classList.remove('active');    break;
+    case 'down':  touchDPad.down = false;  btnDown.classList.remove('active');  break;
+    case 'left':  touchDPad.left = false;  btnLeft.classList.remove('active');  break;
+    case 'right': touchDPad.right = false; btnRight.classList.remove('active'); break;
+    case 'shoot': touchShoot = false;      btnShoot.classList.remove('active'); break;
   }
-  if(!hasL)joy.on=false;mshoot=hasR;
-},{passive:false});
-cv.addEventListener('touchend',function(e){
-  var hasL=false,hasR=false;
-  for(var i=0;i<e.touches.length;i++){if(e.touches[i].clientX<Wr*0.4&&e.touches[i].clientY>Hr*0.5)hasL=true;else hasR=true}
-  if(!hasL)joy.on=false;mshoot=hasR;
+}
+
+// Touch start
+document.addEventListener('touchstart', (e) => {
+  if (gameState === 'title') {
+    // Allow touch on overlay buttons
+    return;
+  }
+  e.preventDefault();
+
+  for (const touch of e.changedTouches) {
+    const type = getTouchTarget(touch);
+    if (type) {
+      activeTouches.set(touch.identifier, type);
+      activateButton(type);
+    }
+  }
+}, { passive: false });
+
+// Touch move
+document.addEventListener('touchmove', (e) => {
+  if (gameState !== 'playing') return;
+  e.preventDefault();
+
+  for (const touch of e.changedTouches) {
+    const oldType = activeTouches.get(touch.identifier);
+    const newType = getTouchTarget(touch);
+
+    // If finger moved to a different button or off buttons
+    if (oldType && oldType !== newType) {
+      deactivateButton(oldType);
+      activeTouches.delete(touch.identifier);
+    }
+    if (newType && newType !== oldType) {
+      activeTouches.set(touch.identifier, newType);
+      activateButton(newType);
+    }
+    if (!newType && oldType) {
+      deactivateButton(oldType);
+      activeTouches.delete(touch.identifier);
+    }
+  }
+}, { passive: false });
+
+// Touch end / cancel
+document.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  for (const touch of e.changedTouches) {
+    const type = activeTouches.get(touch.identifier);
+    if (type) {
+      deactivateButton(type);
+      activeTouches.delete(touch.identifier);
+    }
+  }
+}, { passive: false });
+
+document.addEventListener('touchcancel', (e) => {
+  for (const touch of e.changedTouches) {
+    const type = activeTouches.get(touch.identifier);
+    if (type) {
+      deactivateButton(type);
+      activeTouches.delete(touch.identifier);
+    }
+  }
 });
 
-// Desktop mouse
-cv.addEventListener('mousemove',function(e){if(stg==='play'&&e.clientX<Wr*0.4){var dx=e.clientX-joy.cx,dy=e.clientY-joy.cy;if(M.hypot(dx,dy)<joy.r*1.5){joy.on=true;joy.dx=dx;joy.dy=dy}}});
-cv.addEventListener('mousedown',function(e){if(stg==='play'&&e.clientX>=Wr*0.4)mshoot=true});
-cv.addEventListener('mouseup',function(){mshoot=false;joy.on=false});
+// --- Keyboard Input ---
+window.addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+  if (e.key === ' ' || e.key === 'Spacebar') e.preventDefault();
+});
+
+window.addEventListener('keyup', e => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+// --- Mouse Input ---
+window.addEventListener('mousemove', e => {
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+});
+
+window.addEventListener('mousedown', e => {
+  if (e.button === 0) mouse.down = true;
+});
+
+window.addEventListener('mouseup', e => {
+  if (e.button === 0) mouse.down = false;
+});
+
+// --- Shooting ---
+function getShootDirection() {
+  if (!player) return 0;
+
+  // Priority: mouse aim > movement direction > nearest enemy > upward
+  // If mouse has been moved (not default 0,0), use mouse
+  if (mouse.x !== 0 || mouse.y !== 0) {
+    const worldMouse = screenToWorld(mouse.x, mouse.y);
+    return angleBetween(player, worldMouse);
+  }
+
+  // If using touch/keys movement, aim in movement direction
+  let mdx = 0, mdy = 0;
+  if (touchDPad.up    || keys['w'] || keys['arrowup'])    mdy -= 1;
+  if (touchDPad.down  || keys['s'] || keys['arrowdown'])  mdy += 1;
+  if (touchDPad.left  || keys['a'] || keys['arrowleft'])  mdx -= 1;
+  if (touchDPad.right || keys['d'] || keys['arrowright']) mdx += 1;
+
+  if (mdx !== 0 || mdy !== 0) {
+    return Math.atan2(mdy, mdx);
+  }
+
+  // If not moving, aim at nearest red alien
+  if (redAliens.length > 0) {
+    let nearest = null, nearestDist = Infinity;
+    for (const alien of redAliens) {
+      const d = dist(player, alien);
+      if (d < nearestDist) { nearestDist = d; nearest = alien; }
+    }
+    if (nearest) return angleBetween(player, nearest);
+  }
+
+  // Default: shoot upward
+  return -Math.PI / 2;
+}
+
+function playerShoot(now) {
+  if (!player || gameState !== 'playing') return;
+  if (player.ammo <= 0) {
+    showMessage('⚠️ 弹药耗尽！');
+    return;
+  }
+  if (now - playerLastShot < PLAYER_SHOOT_COOLDOWN) return;
+
+  playerLastShot = now;
+  player.ammo--;
+
+  const angle = getShootDirection();
+
+  playerBullets.push({
+    x: player.x,
+    y: player.y,
+    vx: Math.cos(angle) * BULLET_SPEED_PLAYER,
+    vy: Math.sin(angle) * BULLET_SPEED_PLAYER,
+    life: 120,
+  });
+
+  updateHUD();
+}
+
+function redAlienShoot(alien, now) {
+  if (now - alien.lastShot < alien.shootCooldown) return;
+  alien.lastShot = now;
+
+  const angle = angleBetween(alien, player);
+  enemyBullets.push({
+    x: alien.x,
+    y: alien.y,
+    vx: Math.cos(angle) * BULLET_SPEED_ENEMY,
+    vy: Math.sin(angle) * BULLET_SPEED_ENEMY,
+    life: 180,
+  });
+}
+
+// --- Coordinate Helpers ---
+function screenToWorld(sx, sy) {
+  return { x: sx + camera.x, y: sy + camera.y };
+}
+
+function worldToScreen(wx, wy) {
+  return { x: wx - camera.x, y: wy - camera.y };
+}
+
+function updateCamera() {
+  if (!player) return;
+  camera.x = player.x - canvas.width / 2;
+  camera.y = player.y - canvas.height / 2;
+  camera.x = Math.max(0, Math.min(WORLD_W - canvas.width, camera.x));
+  camera.y = Math.max(0, Math.min(WORLD_H - canvas.height, camera.y));
+}
+
+// --- Collision with Planets ---
+function checkPlayerPlanetCollision() {
+  if (isOnPlanet(player)) {
+    gameOver('撞到了星球！💫');
+    return true;
+  }
+  return false;
+}
+
+// --- Update ---
+function update(dt) {
+  if (gameState !== 'playing') return;
+  const now = performance.now();
+
+  // --- Player Movement ---
+  let dx = 0, dy = 0;
+  if (keys['w'] || keys['arrowup']    || touchDPad.up)    dy -= 1;
+  if (keys['s'] || keys['arrowdown']  || touchDPad.down)  dy += 1;
+  if (keys['a'] || keys['arrowleft']  || touchDPad.left)  dx -= 1;
+  if (keys['d'] || keys['arrowright'] || touchDPad.right) dx += 1;
+
+  if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+
+  player.x += dx * PLAYER_SPEED * (dt / 16);
+  player.y += dy * PLAYER_SPEED * (dt / 16);
+
+  player.x = Math.max(20, Math.min(WORLD_W - 20, player.x));
+  player.y = Math.max(20, Math.min(WORLD_H - 20, player.y));
+
+  // --- Shooting ---
+  if (keys[' '] || keys['spacebar'] || keys['j'] || mouse.down || touchShoot) {
+    playerShoot(now);
+  }
+
+  // --- Earth Healing ---
+  if (isNearEarth(player)) {
+    player.hp = Math.min(PLAYER_MAX_HP, player.hp + HEAL_RATE * (dt / 1000));
+    updateHUD();
+  }
+
+  // --- Planet Collision ---
+  if (checkPlayerPlanetCollision()) return;
+
+  // --- Update Player Bullets ---
+  for (let i = playerBullets.length - 1; i >= 0; i--) {
+    const b = playerBullets[i];
+    b.x += b.vx * (dt / 16);
+    b.y += b.vy * (dt / 16);
+    b.life--;
+
+    if (b.x < -50 || b.x > WORLD_W + 50 || b.y < -50 || b.y > WORLD_H + 50 || b.life <= 0) {
+      playerBullets.splice(i, 1);
+      continue;
+    }
+
+    // Hit red aliens
+    for (let j = redAliens.length - 1; j >= 0; j--) {
+      const alien = redAliens[j];
+      if (dist(b, alien) < ALIEN_SPRITE_W * 0.6) {
+        alien.hp -= PLAYER_DMG;
+        spawnParticles(b.x, b.y, '#ff4444', 6);
+        playerBullets.splice(i, 1);
+
+        if (alien.hp <= 0) {
+          spawnParticles(alien.x, alien.y, '#ff8800', 20);
+          redAliens.splice(j, 1);
+          redAliensKilledThisLevel++;
+          score += 100;
+          updateHUD();
+
+          if (redAliens.length === 0) {
+            score += level * 200;
+            setTimeout(() => levelComplete(), 500);
+          }
+        }
+        break;
+      }
+    }
+
+    // Green aliens are immune to bullets — bullets pass through harmlessly
+
+    // Hit space junk — destroyable
+    if (i >= 0) {
+      for (let j = spaceJunk.length - 1; j >= 0; j--) {
+        const junk = spaceJunk[j];
+        if (dist(b, junk) < JUNK_SIZE + 4) {
+          junk.hp--;
+          spawnParticles(b.x, b.y, '#888888', 4);
+          playerBullets.splice(i, 1);
+          if (junk.hp <= 0) {
+            spawnParticles(junk.x, junk.y, '#aaaaaa', 12);
+            spaceJunk.splice(j, 1);
+            score += 30;
+            updateHUD();
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  // --- Update Enemy Bullets ---
+  for (let i = enemyBullets.length - 1; i >= 0; i--) {
+    const b = enemyBullets[i];
+    b.x += b.vx * (dt / 16);
+    b.y += b.vy * (dt / 16);
+    b.life--;
+
+    if (b.x < -50 || b.x > WORLD_W + 50 || b.y < -50 || b.y > WORLD_H + 50 || b.life <= 0) {
+      enemyBullets.splice(i, 1);
+      continue;
+    }
+
+    if (now > player.invincibleUntil) {
+      if (dist(b, player) < PLAYER_SPRITE_SIZE * 0.4) {
+        player.hp -= RED_ALIEN_DMG;
+        player.invincibleUntil = now + PLAYER_INVINCIBLE_MS;
+        spawnParticles(player.x, player.y, '#ff0000', 8);
+        enemyBullets.splice(i, 1);
+        updateHUD();
+
+        if (player.hp <= 0) {
+          gameOver('火箭被击毁了！💥');
+          return;
+        }
+      }
+    }
+  }
+
+  // --- Update Red Aliens ---
+  for (const alien of redAliens) {
+    const ang = angleBetween(alien, player);
+    alien.x += Math.cos(ang) * RED_ALIEN_SPEED * (dt / 16);
+    alien.y += Math.sin(ang) * RED_ALIEN_SPEED * (dt / 16);
+    alien.x = Math.max(30, Math.min(WORLD_W - 30, alien.x));
+    alien.y = Math.max(30, Math.min(WORLD_H - 30, alien.y));
+    redAlienShoot(alien, now);
+  }
+
+  // --- Update Green Aliens ---
+  for (const green of greenAliens) {
+    if (now > green.wanderTimer) {
+      green.wanderAngle = Math.random() * Math.PI * 2;
+      green.wanderTimer = now + randomInRange(1000, 3000);
+    }
+
+    green.x += Math.cos(green.wanderAngle) * GREEN_ALIEN_SPEED * (dt / 16);
+    green.y += Math.sin(green.wanderAngle) * GREEN_ALIEN_SPEED * (dt / 16);
+    green.x = Math.max(30, Math.min(WORLD_W - 30, green.x));
+    green.y = Math.max(30, Math.min(WORLD_H - 30, green.y));
+
+    // Player bumps into green alien = GAME OVER
+    if (now > player.invincibleUntil) {
+      if (dist(green, player) < PLAYER_SPRITE_SIZE * 0.5 + ALIEN_SPRITE_W * 0.5) {
+        spawnParticles(player.x, player.y, '#ff0000', 20);
+        gameOver('撞到了绿色外星人！💔');
+        return;
+      }
+    }
+
+    // Drop energy when player needs ammo
+    if (player.ammo < 30 && dist(green, player) < 250) {
+      if (Math.random() < 0.003 * (dt / 16)) {
+        energyPacks.push({
+          x: green.x,
+          y: green.y,
+          amount: green.energyAmount,
+          life: 600,
+          vy: -1,
+        });
+        spawnParticles(green.x, green.y, '#00ff44', 8);
+        const pos = randomEdgePosition();
+        green.x = pos.x;
+        green.y = pos.y;
+        green.energyAmount = Math.random() < 0.5 ? 20 : 50;
+      }
+    }
+  }
+
+  // --- Update Space Junk ---
+  for (const junk of spaceJunk) {
+    junk.x += Math.cos(junk.angle) * JUNK_SPEED * (dt / 16);
+    junk.y += Math.sin(junk.angle) * JUNK_SPEED * (dt / 16);
+    junk.x = Math.max(-50, Math.min(WORLD_W + 50, junk.x));
+    junk.y = Math.max(-50, Math.min(WORLD_H + 50, junk.y));
+
+    // Player collision with space junk = damage
+    if (now > player.invincibleUntil) {
+      if (dist(junk, player) < PLAYER_SPRITE_SIZE * 0.4 + JUNK_SIZE) {
+        player.hp -= JUNK_DMG;
+        player.invincibleUntil = now + PLAYER_INVINCIBLE_MS;
+        spawnParticles(player.x, player.y, '#ff6600', 10);
+        updateHUD();
+        if (player.hp <= 0) {
+          gameOver('被宇宙垃圾撞毁了！💫');
+          return;
+        }
+      }
+    }
+  }
+
+  // --- Update Energy Packs ---
+  for (let i = energyPacks.length - 1; i >= 0; i--) {
+    const pack = energyPacks[i];
+    pack.y += pack.vy * (dt / 16);
+    pack.life--;
+
+    if (dist(pack, player) < 35) {
+      player.ammo = Math.min(PLAYER_MAX_AMMO, player.ammo + pack.amount);
+      spawnParticles(pack.x, pack.y, '#00ff88', 15);
+      showMessage(`⚡ +${pack.amount} 弹药！`);
+      energyPacks.splice(i, 1);
+      updateHUD();
+      continue;
+    }
+
+    if (pack.life <= 0) {
+      energyPacks.splice(i, 1);
+    }
+  }
+
+  // --- Update Particles ---
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx * (dt / 16);
+    p.y += p.vy * (dt / 16);
+    p.life -= p.decay * (dt / 16);
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  // --- Update Camera ---
+  updateCamera();
+
+  // --- Respawn green aliens ---
+  const targetGreen = Math.max(1, Math.floor(level / 2));
+  if (greenAliens.length < targetGreen && Math.random() < 0.002 * (dt / 16)) {
+    greenAliens.push(spawnGreenAlien());
+    showMessage('👽 绿色外星人来了！');
+  }
+
+  // --- Respawn space junk ---
+  const targetJunk = Math.min(2 + level, 8);
+  if (spaceJunk.length < targetJunk && Math.random() < 0.003 * (dt / 16)) {
+    spaceJunk.push(spawnSpaceJunk());
+  }
+
+  // --- Clamp ---
+  player.hp = Math.max(0, Math.min(PLAYER_MAX_HP, player.hp));
+  player.ammo = Math.max(0, Math.min(PLAYER_MAX_AMMO, player.ammo));
+}
+
+// --- Render ---
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // --- Background Map ---
+  if (images.map) {
+    ctx.drawImage(images.map, -camera.x, -camera.y, WORLD_W, WORLD_H);
+  } else {
+    ctx.fillStyle = '#0a0a1a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // --- Earth Zone Indicator ---
+  const earthScreen = worldToScreen(EARTH.x, EARTH.y);
+  if (earthScreen.x > -200 && earthScreen.x < canvas.width + 200 &&
+      earthScreen.y > -200 && earthScreen.y < canvas.height + 200) {
+    const gradient = ctx.createRadialGradient(earthScreen.x, earthScreen.y, EARTH.radius * 0.6,
+      earthScreen.x, earthScreen.y, EARTH.radius);
+    gradient.addColorStop(0, 'rgba(0, 200, 255, 0.05)');
+    gradient.addColorStop(0.5, 'rgba(0, 150, 255, 0.1)');
+    gradient.addColorStop(1, 'rgba(0, 100, 255, 0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(earthScreen.x, earthScreen.y, EARTH.radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    const pulse = Math.sin(performance.now() / 1000) * 0.3 + 0.7;
+    ctx.strokeStyle = `rgba(0, 200, 255, ${pulse * 0.4})`;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 5]);
+    ctx.beginPath();
+    ctx.arc(earthScreen.x, earthScreen.y, EARTH.radius * pulse, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // --- Planet Collision Zones ---
+  for (const planet of PLANETS) {
+    const ps = worldToScreen(planet.x, planet.y);
+    if (ps.x > -100 && ps.x < canvas.width + 100 && ps.y > -100 && ps.y < canvas.height + 100) {
+      ctx.strokeStyle = 'rgba(255, 100, 50, 0.25)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 8]);
+      ctx.beginPath();
+      ctx.arc(ps.x, ps.y, planet.radius + 5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  // --- Energy Packs ---
+  for (const pack of energyPacks) {
+    const ps = worldToScreen(pack.x, pack.y);
+    const bob = Math.sin(pack.life * 0.1) * 4;
+    const glow = ctx.createRadialGradient(ps.x, ps.y + bob, 2, ps.x, ps.y + bob, 18);
+    glow.addColorStop(0, 'rgba(0, 255, 100, 0.9)');
+    glow.addColorStop(0.5, 'rgba(0, 255, 100, 0.4)');
+    glow.addColorStop(1, 'rgba(0, 255, 100, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(ps.x, ps.y + bob, 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#00ff66';
+    ctx.beginPath();
+    ctx.arc(ps.x, ps.y + bob, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(ps.x - 2, ps.y + bob - 2, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`+${pack.amount}`, ps.x, ps.y + bob - 16);
+  }
+
+  // --- Player Bullets ---
+  for (const b of playerBullets) {
+    const ps = worldToScreen(b.x, b.y);
+    if (ps.x < -10 || ps.x > canvas.width + 10 || ps.y < -10 || ps.y > canvas.height + 10) continue;
+    const glow = ctx.createRadialGradient(ps.x, ps.y, 0, ps.x, ps.y, 6);
+    glow.addColorStop(0, 'rgba(255, 255, 200, 0.9)');
+    glow.addColorStop(0.5, 'rgba(255, 200, 50, 0.5)');
+    glow.addColorStop(1, 'rgba(255, 100, 0, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(ps.x, ps.y, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(ps.x, ps.y, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // --- Enemy Bullets ---
+  for (const b of enemyBullets) {
+    const ps = worldToScreen(b.x, b.y);
+    if (ps.x < -10 || ps.x > canvas.width + 10 || ps.y < -10 || ps.y > canvas.height + 10) continue;
+    const glow = ctx.createRadialGradient(ps.x, ps.y, 0, ps.x, ps.y, 5);
+    glow.addColorStop(0, 'rgba(255, 80, 80, 0.9)');
+    glow.addColorStop(0.5, 'rgba(255, 30, 30, 0.5)');
+    glow.addColorStop(1, 'rgba(255, 0, 0, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(ps.x, ps.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ff4444';
+    ctx.beginPath();
+    ctx.arc(ps.x, ps.y, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // --- Space Junk (black debris) ---
+  for (const junk of spaceJunk) {
+    const ps = worldToScreen(junk.x, junk.y);
+    if (ps.x < -60 || ps.x > canvas.width + 60 || ps.y < -60 || ps.y > canvas.height + 60) continue;
+
+    ctx.save();
+    ctx.translate(ps.x, ps.y);
+
+    // Draw irregular dark debris shape
+    const now = performance.now();
+    const rotAngle = (now / 1000) * junk.rotSpeed * 60; // slow rotation
+    ctx.rotate(rotAngle);
+
+    // Irregular polygon — dark grey/black debris
+    const points = 7;
+    const baseRadius = JUNK_SIZE;
+    ctx.fillStyle = '#2a2a2a';
+    ctx.strokeStyle = '#555555';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < points; i++) {
+      const a = (i / points) * Math.PI * 2;
+      const r = baseRadius * (0.55 + Math.sin(i * 4.7 + junk.x * 0.1) * 0.25 + Math.cos(i * 2.3 + junk.y * 0.1) * 0.2);
+      const px = Math.cos(a) * r;
+      const py = Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Inner crack lines
+    ctx.strokeStyle = '#444444';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(-baseRadius * 0.25, -baseRadius * 0.2);
+    ctx.lineTo(baseRadius * 0.15, baseRadius * 0.3);
+    ctx.moveTo(baseRadius * 0.3, -baseRadius * 0.25);
+    ctx.lineTo(-baseRadius * 0.1, baseRadius * 0.1);
+    ctx.stroke();
+
+    ctx.restore();
+
+    // HP bar (small)
+    if (junk.hp < junk.maxHp) {
+      const hpPct = junk.hp / junk.maxHp;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(ps.x - 10, ps.y - JUNK_SIZE - 10, 20, 3);
+      ctx.fillStyle = hpPct > 0.5 ? '#888' : '#ff6600';
+      ctx.fillRect(ps.x - 10, ps.y - JUNK_SIZE - 10, 20 * hpPct, 3);
+    }
+
+    // Label
+    ctx.fillStyle = '#777';
+    ctx.font = '9px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('碎片', ps.x, ps.y - JUNK_SIZE - 14);
+  }
+
+  // --- Red Aliens ---
+  for (const alien of redAliens) {
+    const ps = worldToScreen(alien.x, alien.y);
+    if (ps.x < -80 || ps.x > canvas.width + 80 || ps.y < -80 || ps.y > canvas.height + 80) continue;
+
+    if (images.redAlien) {
+      ctx.save();
+      ctx.translate(ps.x, ps.y);
+      const faceAngle = angleBetween(alien, player);
+      ctx.rotate(faceAngle + Math.PI / 2);
+      ctx.drawImage(images.redAlien, -ALIEN_SPRITE_W / 2, -ALIEN_SPRITE_H / 2, ALIEN_SPRITE_W, ALIEN_SPRITE_H);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = '#ff2222';
+      ctx.beginPath();
+      ctx.arc(ps.x, ps.y, 18, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // HP bar
+    const hpPct = alien.hp / alien.maxHp;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(ps.x - 15, ps.y - ALIEN_SPRITE_H / 2 - 12, 30, 4);
+    ctx.fillStyle = hpPct > 0.5 ? '#44ff44' : hpPct > 0.25 ? '#ffaa00' : '#ff0000';
+    ctx.fillRect(ps.x - 15, ps.y - ALIEN_SPRITE_H / 2 - 12, 30 * hpPct, 4);
+
+    // Shoot warning
+    const now = performance.now();
+    if (now - alien.lastShot > alien.shootCooldown * 0.7) {
+      ctx.fillStyle = `rgba(255, 0, 0, ${0.3 + Math.sin(now / 50) * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(ps.x, ps.y, ALIEN_SPRITE_W * 0.5 + 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // --- Green Aliens ---
+  for (const green of greenAliens) {
+    const ps = worldToScreen(green.x, green.y);
+    if (ps.x < -80 || ps.x > canvas.width + 80 || ps.y < -80 || ps.y > canvas.height + 80) continue;
+
+    if (images.greenAlien) {
+      ctx.save();
+      ctx.translate(ps.x, ps.y);
+      ctx.rotate(green.wanderAngle + Math.PI / 2);
+      ctx.drawImage(images.greenAlien, -ALIEN_SPRITE_W / 2, -ALIEN_SPRITE_H / 2, ALIEN_SPRITE_W, ALIEN_SPRITE_H);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = '#22ff44';
+      ctx.beginPath();
+      ctx.arc(ps.x, ps.y, 18, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Friendly indicator
+    ctx.strokeStyle = '#00ff66';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.arc(ps.x, ps.y, ALIEN_SPRITE_W * 0.5 + 5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#00ff88';
+    ctx.font = '10px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('友好', ps.x, ps.y - ALIEN_SPRITE_H / 2 - 8);
+  }
+
+  // --- Draw Player ---
+  if (player) {
+    const ps = worldToScreen(player.x, player.y);
+    const now = performance.now();
+
+    const showPlayer = now > player.invincibleUntil || Math.floor(now / 60) % 2 === 0;
+
+    if (showPlayer) {
+      if (images.player) {
+        ctx.save();
+        ctx.translate(ps.x, ps.y);
+        const faceAngle = getShootDirection();
+        ctx.rotate(faceAngle + Math.PI / 2);
+        ctx.drawImage(images.player, -PLAYER_SPRITE_SIZE / 2, -PLAYER_SPRITE_SIZE / 2,
+          PLAYER_SPRITE_SIZE, PLAYER_SPRITE_SIZE);
+        ctx.restore();
+      } else {
+        // Fallback rocket shape
+        ctx.save();
+        ctx.translate(ps.x, ps.y);
+        ctx.rotate(getShootDirection() + Math.PI / 2);
+        ctx.fillStyle = '#4488ff';
+        ctx.beginPath();
+        ctx.moveTo(0, -25);
+        ctx.lineTo(15, 15);
+        ctx.lineTo(0, 5);
+        ctx.lineTo(-15, 15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#ff6600';
+        ctx.beginPath();
+        ctx.arc(0, 0, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // Invincibility shield
+    if (now < player.invincibleUntil) {
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.3 + Math.sin(now / 30) * 0.3})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(ps.x, ps.y, PLAYER_SPRITE_SIZE / 2 + 6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  // --- Particles ---
+  for (const p of particles) {
+    const ps = worldToScreen(p.x, p.y);
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(ps.x, ps.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // --- Crosshair (mouse) ---
+  if (mouse.x !== 0 || mouse.y !== 0) {
+    const crossSize = 8;
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(mouse.x - crossSize, mouse.y);
+    ctx.lineTo(mouse.x - crossSize / 3, mouse.y);
+    ctx.moveTo(mouse.x + crossSize / 3, mouse.y);
+    ctx.lineTo(mouse.x + crossSize, mouse.y);
+    ctx.moveTo(mouse.x, mouse.y - crossSize);
+    ctx.lineTo(mouse.x, mouse.y - crossSize / 3);
+    ctx.moveTo(mouse.x, mouse.y + crossSize / 3);
+    ctx.lineTo(mouse.x, mouse.y + crossSize);
+    ctx.stroke();
+  }
+
+  // --- Earth proximity indicator ---
+  if (player && isNearEarth(player)) {
+    const ps = worldToScreen(player.x, player.y);
+    const alpha = 0.5 + Math.sin(performance.now() / 300) * 0.5;
+    ctx.fillStyle = `rgba(0, 200, 255, ${alpha})`;
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('🛡️ 母星护盾 · 回血中...', ps.x, ps.y - PLAYER_SPRITE_SIZE / 2 - 20);
+  }
+
+  // --- Low ammo warning ---
+  if (player && player.ammo <= 10 && player.ammo > 0) {
+    const ps = worldToScreen(player.x, player.y);
+    ctx.fillStyle = 'rgba(255, 200, 0, 0.8)';
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚠️ 弹药不足！', ps.x, ps.y - PLAYER_SPRITE_SIZE / 2 - 20);
+  }
+}
+
+// --- Resize ---
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  updateCamera();
+}
+window.addEventListener('resize', resize);
+
+// --- Game Loop ---
+function gameLoop(timestamp) {
+  if (!lastTime) lastTime = timestamp;
+  let dt = timestamp - lastTime;
+  lastTime = timestamp;
+  if (dt > 100) dt = 100;
+
+  update(dt);
+  render();
+  if (gameState === 'playing') updateHUD();
+
+  requestAnimationFrame(gameLoop);
+}
+
+// --- Initialize ---
+async function init() {
+  resize();
+
+  document.getElementById('overlay-content').innerHTML = `
+    <h1>🚀 辰辰的宇宙历险记</h1>
+    <h2>加载素材中...</h2>
+  `;
+
+  const loadPromises = Object.entries(ASSET_PATHS).map(([key, path]) => loadImage(key, path));
+  await Promise.all(loadPromises);
+
+  document.getElementById('overlay-content').innerHTML = `
+    <h1>🚀 辰辰的宇宙历险记</h1>
+    <h2>太空射击大冒险</h2>
+    <div class="subtitle">
+      🌍 母星地球 · 靠近回血每秒10点<br>
+      👾 红色外星人 · 消灭它们！每次3点伤害<br>
+      👽 绿色外星人 · 友好伙伴！不能伤害，撞击=结束<br>
+      🪨 宇宙垃圾 · 黑色碎片，可击毁，撞到扣10血<br>
+      ⚡ 能量包 · +20或+50子弹随机<br>
+      💫 小心星球 · 撞击即结束
+    </div>
+    <button class="btn btn-primary" onclick="startGame()">🎮 开始游戏</button>
+    <div class="controls-info">
+      💻 <kbd>WASD</kbd>移动 &nbsp;<kbd>鼠标</kbd>瞄准 &nbsp;<kbd>点击</kbd>射击<br>
+      📱 左侧方向键移动 &nbsp; 右侧按钮射击
+    </div>
+  `;
+
+  lastTime = performance.now();
+  requestAnimationFrame(gameLoop);
+}
+
+init();
 </script>
 </body>
 </html>
