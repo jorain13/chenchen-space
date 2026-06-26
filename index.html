@@ -285,7 +285,8 @@ function initLevel(lv) {
   pickups = [];
   particles = [];
 
-  nextPickupTimer = Date.now() + rand(8000, 15000);
+  // 关卡越高，能量包出现越快
+  nextPickupTimer = Date.now() + rand(M.max(3000, 8000 - lv * 500), M.max(5000, 15000 - lv * 1000));
   nextCometTimer  = Date.now() + rand(4000, 8000);
 
   updateHUD();
@@ -636,7 +637,8 @@ function update(dt) {
       life: 650,
       vy: -0.3
     });
-    nextPickupTimer = now + rand(5000, 12000);
+    // 关卡越高刷新越快
+    nextPickupTimer = now + rand(M.max(2000, 5000 - level * 300), M.max(4000, 12000 - level * 700));
   }
 
   // ── 拾取能量包 ──
