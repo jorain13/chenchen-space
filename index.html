@@ -451,13 +451,7 @@ function updateArm(dt) {
     }
     // 抓取炸弹
     if (armState === 'extending') {
-      for (var i = bombs.length - 1; i >= 0; i--) {
-        if (dist({ x: tipX, y: tipY }, bombs[i].pos) < 36) {
-          storedBombs++;
-          bombs.splice(i, 1);
-          armState = 'retracting';
-          break;
-        }
+  // 炸弹只能机械臂抓取
       }
     }
   } else if (armState === 'retracting') {
@@ -629,14 +623,7 @@ function update(dt) {
   for (var i = 0; i < spaceJunk.length; i++) {
     if (dist(player, spaceJunk[i].pos) < spaceJunk[i].radius + 14) { gameOver('撞到太空垃圾'); return; }
   }
-  for (var i = bombs.length - 1; i >= 0; i--) {
-    if (dist(player, bombs[i].pos) < 40) {
-      // 炸弹爆炸：范围红外星人变黑后消失
-      var blastR = CFG.ARM_MAX_LEN + 50;
-      for (var j = redAliens.length - 1; j >= 0; j--) {
-        if (dist(player, redAliens[j].pos) < blastR) {
-          redAliens[j].dying = 30; // 变黑倒计时
-        }
+  // 炸弹只能机械臂抓取
       }
       spawnParticles(player.x, player.y, '#f80', 30);
       bombs.splice(i, 1);
