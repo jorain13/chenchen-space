@@ -506,10 +506,11 @@ function playerFire(now, force) {
 
 function update(dt) {
   if (state === 'countdown') {
-    // 小王子动画 + 倒计时并行
+    // 小王子慢走：最后3秒种花
     var elapsed2 = Date.now() - princeTimer;
-    if (elapsed2 < 1000) princePhase = 0;
-    else if (elapsed2 < 2500) princePhase = 1;
+    var totalMS = CFG.COUNTDOWN_SEC * 1000;
+    if (elapsed2 < totalMS - 3000) princePhase = 0;
+    else if (elapsed2 < totalMS) princePhase = 1;
     else princePhase = 2;
 
     // 倒计时结束 → 下一关
@@ -962,14 +963,16 @@ function render() {
   if (state === 'countdown') {
     var el = Date.now() - princeTimer;
     var nextAngle = ARC_LEFT + plantedFlowers.length * ARC_STEP;
-    var walkProgress = princePhase === 0 ? M.min(1, el / 1000) : 1;
-    walkProgress = 1 - M.pow(1 - walkProgress, 2);
+    var walkDuration = CFG.COUNTDOWN_SEC * 1000 - 3000; // 走到最后3秒
+    var walkProgress = princePhase === 0 ? M.min(1, el / walkDuration) : 1;
+    walkProgress = 1 - M.pow(1 - walkProgress, 3); // 慢走缓动
     var curAngle = ARC_RIGHT + (nextAngle - ARC_RIGHT) * walkProgress;
     var prX = fp.x + M.sin(curAngle) * pr2;
     var prY = fp.y - M.cos(curAngle) * pr2;
 
     if (princePhase >= 1 && images.flower) {
-      var fa2 = princePhase === 2 ? 1 : M.min(1, (el - 1000) / 600);
+      var plantStart = CFG.COUNTDOWN_SEC * 1000 - 3000;
+      var fa2 = M.min(1, (el - plantStart) / 2000);
       ctx.globalAlpha = fa2;
       var nfx = fp.x + M.sin(nextAngle) * pr2;
       var nfy = fp.y - M.cos(nextAngle) * pr2;
@@ -980,7 +983,8 @@ function render() {
     }
 
     if (princePhase <= 1 && images.prince) {
-      var pa = princePhase === 0 ? 1 : M.max(0, 1 - (el - 2200) / 300);
+      var fadeStart = CFG.COUNTDOWN_SEC * 1000 - 1000;
+      var pa = el < fadeStart ? 1 : M.max(0, 1 - (el - fadeStart) / 1000);
       ctx.globalAlpha = pa;
       ctx.save(); ctx.translate(prX, prY); ctx.rotate(curAngle);
       ctx.drawImage(images.prince, -22, -55, 44, 55);
