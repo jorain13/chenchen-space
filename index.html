@@ -1019,10 +1019,12 @@ function render() {
       ctx.save(); ctx.translate(prX, prY);
       ctx.drawImage(images.prince, -22, -55, 44, 55);
       ctx.restore();
-      // 第99朵花起公主出现，第100朵起一起出现
-      if (plantedFlowers.length >= 0 && images.princess) { // TODO: 改回98
-        var pssX = prX - 30;
+      // 第99朵起公主在右侧出现，王子到位后公主再过来
+      if (plantedFlowers.length >= 0 && images.princess && walkProgress > 0.8) { // TODO: 改回98
+        var pssX = prX + 35;
         var pssY = prY;
+        var pssAlpha = (walkProgress - 0.8) / 0.2; // 王子快到时公主淡入
+        ctx.globalAlpha = M.min(1, pssAlpha) * pa;
         ctx.save(); ctx.translate(pssX, pssY);
         ctx.drawImage(images.princess, -30, -60, 60, 65);
         ctx.restore();
