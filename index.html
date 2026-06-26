@@ -400,9 +400,9 @@ function playerFire(now, force) {
 function update(dt) {
   if (state === 'prince') {
     // 小王子动画计时
-    // 阶段0(0-1200): 王子出现  阶段1(1200-2500): 种花  阶段2(2500-3500): 王子消失
+    // 阶段0(0-1000): 从右侧走出  阶段1(1000-2500): 种花  阶段2(2500-3500): 王子消失
     var elapsed = Date.now() - princeTimer;
-    if (elapsed < 1200) princePhase = 0;
+    if (elapsed < 1000) princePhase = 0;
     else if (elapsed < 2500) princePhase = 1;
     else princePhase = 2;
 
@@ -767,15 +767,16 @@ function render() {
     ctx.setLineDash([]);
   }
 
-  // ── 永久种植的小花（右下角黄色大星球上，从左到右排列）──
-  var flowerPlanet = PLANETS[3]; // 右下角大星球
+  // ── 永久种植的小花（右下角黄色大星球表面，从左到右排列）──
+  var flowerPlanet = PLANETS[3];
   var fp = w2s(flowerPlanet.x, flowerPlanet.y);
+  var surfaceY = fp.y - flowerPlanet.r; // 星球顶部表面精确位置
+
   if (images.flower) {
     for (var fi = 0; fi < plantedFlowers.length; fi++) {
-      var fx = fp.x - flowerPlanet.r + 10 + fi * 16;
-      var fy = fp.y - 4;
+      var fx = fp.x - flowerPlanet.r + 12 + fi * 16;
       ctx.save();
-      ctx.translate(fx, fy);
+      ctx.translate(fx, surfaceY + 2);
       ctx.drawImage(images.flower, -10, -14, 20, 22);
       ctx.restore();
     }
@@ -785,31 +786,37 @@ function render() {
   if (state === 'prince') {
     var elapsed = Date.now() - princeTimer;
     var t = elapsed / 1000;
-    var princeX = fp.x - flowerPlanet.r - 10; // 王子站在星球左边
-    var princeY = fp.y - flowerPlanet.r - 5;
 
-    // 新种下的小花（动画期间闪烁）
-    var newFlowerX = fp.x - flowerPlanet.r + 10 + plantedFlowers.length * 16;
-    var newFlowerY = fp.y - 4;
+    // 王子站在星球表面的目标位置
+    var princeEndX = fp.x - flowerPlanet.r + 8;
+
+    // 阶段0：从右侧走出来 (0-1000ms)
+    var walkProgress = princePhase === 0 ? M.min(1, elapsed / 1000) : 1;
+    var princeX = fp.x + 50 + (princeEndX - (fp.x + 50)) * walkProgress;
+    var princeY = surfaceY; // 脚精确站在星球表面
+
+    // 新花朵位置
+    var newFlowerX = fp.x - flowerPlanet.r + 12 + plantedFlowers.length * 16;
 
     if (princePhase >= 1 && images.flower) {
-      // 阶段1和2：新花朵出现
-      var flowerAlpha = princePhase === 2 ? 1 : M.min(1, (elapsed - 1200) / 600);
+      // 阶段1和2：新花朵出现并保留
+      var flowerAlpha = princePhase === 2 ? 1 : M.min(1, (elapsed - 1000) / 600);
       ctx.globalAlpha = flowerAlpha;
       ctx.save();
-      ctx.translate(newFlowerX, newFlowerY);
+      ctx.translate(newFlowerX, surfaceY + 2);
       ctx.drawImage(images.flower, -10, -14, 20, 22);
       ctx.restore();
       ctx.globalAlpha = 1;
     }
 
     if (princePhase <= 1 && images.prince) {
-      // 阶段0和1：小王子可见
-      var princeAlpha = princePhase === 1 ? M.max(0, 1 - (elapsed - 2200) / 300) : 1;
+      // 阶段0和1：小王子可见；阶段1末尾渐隐
+      var princeAlpha = princePhase === 0 ? 1 : M.max(0, 1 - (elapsed - 2200) / 300);
       ctx.globalAlpha = princeAlpha;
       ctx.save();
       ctx.translate(princeX, princeY);
-      ctx.drawImage(images.prince, -22, -40, 44, 55);
+      // 脚在 translate 原点，身体在上方
+      ctx.drawImage(images.prince, -22, -55, 44, 55);
       ctx.restore();
       ctx.globalAlpha = 1;
     }
@@ -819,7 +826,7 @@ function render() {
     ctx.font = 'bold 13px sans-serif';
     ctx.textAlign = 'center';
     var msg = princePhase === 0 ? '🌹 小王子来了！' : princePhase === 1 ? '🌸 种下第' + (plantedFlowers.length + 1) + '朵小花' : '✨';
-    ctx.fillText(msg, fp.x, fp.y - flowerPlanet.r - 48);
+    ctx.fillText(msg, fp.x, fp.y - flowerPlanet.r - 55);
   }
 
   // ── 宇宙垃圾 ──
