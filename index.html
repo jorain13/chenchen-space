@@ -1416,6 +1416,9 @@ canvas.addEventListener('touchstart', function(e) {
   if (state !== 'play' && state !== 'countdown') return;
   for (var i = 0; i < e.touches.length; i++) {
     var t = e.touches[i];
+    // 忽略机械臂按钮区域（避免误触发射子弹）
+    var btnR = document.getElementById('armBtn').getBoundingClientRect();
+    if (t.clientX >= btnR.left && t.clientX <= btnR.right && t.clientY >= btnR.top && t.clientY <= btnR.bottom) continue;
     if (t.clientX < screenW * 0.45 && t.clientY > screenH * 0.4) {
       joystick.active = true;
       joystick.dx = t.clientX - joystick.cx;
@@ -1463,6 +1466,8 @@ canvas.addEventListener('mousemove', function(e) {
   }
 });
 canvas.addEventListener('mousedown', function(e) {
+  var btnR2 = document.getElementById('armBtn').getBoundingClientRect();
+  if (e.clientX >= btnR2.left && e.clientX <= btnR2.right && e.clientY >= btnR2.top && e.clientY <= btnR2.bottom) return;
   if ((state === 'play' || state === 'countdown') && e.clientX >= screenW * 0.45) mouseShoot = true;
 });
 canvas.addEventListener('mouseup', function() {
