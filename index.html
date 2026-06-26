@@ -80,10 +80,13 @@ var CFG = {
   // ── 地球回血 ──
   HEAL_RATE: 10,              // HP per second
 
-  // ── 能量石积分 ──
-  STONE_SCORES: [50, 100, 300],       // 等级1/2/3 分值
-  STONE_SPAWN_MIN: 3000,              // 最短刷新间隔 ms
-  STONE_SPAWN_MAX: 8000,              // 最长刷新间隔 ms
+  // ── 彩色陨石（可触碰+机械臂抓取）──
+  METEOR_SCORES: [50, 100, 300],      // 红/蓝/金 分值
+  METEOR_BASE: 20,                    // 第1关总数
+  METEOR_SCALE: 4,                    // 每关+4颗
+  METEOR_RATIO: [0.60, 0.30, 0.10],  // 红/蓝/金 比例
+  METEOR_SPAWN_MIN: 2500,             // 刷新间隔 ms
+  METEOR_SPAWN_MAX: 6000,
 
   // ── 机械臂 ──
   ARM_MAX_LEN: 100,                   // 最大伸出 = 火箭高度
@@ -159,8 +162,8 @@ var comets      = [];
 var bullets     = [];
 var enemyBullets = [];
 var pickups     = [];
-var energyStones = [];
-var floatingTxt  = [];   // 浮动文字 +50 +100 等
+var meteors    = [];   // 彩色陨石（可抓可取）
+var floatingTxt  = [];
 var particles   = [];
 
 var camera  = { x: 0, y: 0 };
@@ -250,15 +253,15 @@ function spawnSpaceJunk(junkSpeed) {
   };
 }
 
-function spawnEnergyStone() {
-  // 高等级概率低：等级1=60%, 等级2=30%, 等级3=10%
+function spawnMeteor() {
+  // 红60% 蓝30% 金10%
   var roll = M.random();
-  var tier = roll < 0.6 ? 0 : roll < 0.9 ? 1 : 2;
-  energyStones.push({
+  var tier = roll < CFG.METEOR_RATIO[0] ? 0 : roll < CFG.METEOR_RATIO[0] + CFG.METEOR_RATIO[1] ? 1 : 2;
+  meteors.push({
     pos: { x: rand(60, CFG.WORLD_W - 60), y: rand(60, CFG.WORLD_H - 60) },
     tier: tier,
-    life: 500,
-    vy: -0.2,
+    life: 600,
+    vy: -0.15,
     bob: rand(0, M.PI * 2)
   });
 }
@@ -311,15 +314,15 @@ function initLevel(lv) {
   bullets = [];
   enemyBullets = [];
   pickups = [];
-  energyStones = [];
+  meteors = [];
   floatingTxt = [];
   particles = [];
 
   // 关卡越高，能量包出现越快
   nextPickupTimer = Date.now() + rand(M.max(3000, 8000 - lv * 500), M.max(5000, 15000 - lv * 1000));
   nextCometTimer  = Date.now() + rand(4000, 8000);
-  // 能量石：关卡越高刷新越慢
-  nextStoneTimer  = Date.now() + rand(CFG.STONE_SPAWN_MIN + lv * 500, CFG.STONE_SPAWN_MAX + lv * 1000);
+  // 陨石：关卡越高越多
+  nextStoneTimer  = Date.now() + rand(CFG.METEOR_SPAWN_MIN, CFG.METEOR_SPAWN_MAX);
 
   updateHUD();
 }
@@ -397,12 +400,12 @@ function updateArm(dt) {
       armLength = CFG.ARM_MAX_LEN;
       armState = 'retracting';
     }
-    // 检测碰到能量石
+    // 检测碰到陨石
     var tipX = player.x + M.cos(armAngle) * armLength;
     var tipY = player.y + M.sin(armAngle) * armLength;
-    for (var i = energyStones.length - 1; i >= 0; i--) {
-      if (dist({ x: tipX, y: tipY }, energyStones[i].pos) < 26) {
-        armGrabbed = energyStones[i];
+    for (var i = meteors.length - 1; i >= 0; i--) {
+      if (dist({ x: tipX, y: tipY }, meteors[i].pos) < 26) {
+        armGrabbed = meteors[i];
         armSlow = CFG.ARM_SLOW[armGrabbed.tier];
         armState = 'retracting';
         break;
@@ -413,13 +416,13 @@ function updateArm(dt) {
     armLength = M.max(0, armLength - retractSpd);
     if (armLength <= 2) {
       if (armGrabbed !== null) {
-        var idx = energyStones.indexOf(armGrabbed);
+        var idx = meteors.indexOf(armGrabbed);
         if (idx >= 0) {
-          var pts = CFG.STONE_SCORES[armGrabbed.tier];
+          var pts = CFG.METEOR_SCORES[armGrabbed.tier];
           score += pts;
           floatingTxt.push({ x: armGrabbed.pos.x, y: armGrabbed.pos.y, text: '+' + pts, life: 60, vy: -2 });
           spawnParticles(armGrabbed.pos.x, armGrabbed.pos.y, '#ff0', 8);
-          energyStones.splice(idx, 1);
+          meteors.splice(idx, 1);
           updateHUD();
         }
       }
@@ -771,33 +774,29 @@ function update(dt) {
     j.rotation += j.rotSpeed * (dt / 16);
   }
 
-  // ── 能量石刷新（关卡越高越稀有）──
+  // ── 陨石刷新（每关总数递增，保持场上有足够陨石）──
+  var totalMeteors = CFG.METEOR_BASE + (level - 1) * CFG.METEOR_SCALE;
   if (now > nextStoneTimer) {
-    if (energyStones.length < 3) spawnEnergyStone();
-    nextStoneTimer = now + rand(CFG.STONE_SPAWN_MIN + level * 500, CFG.STONE_SPAWN_MAX + level * 1000);
+    if (meteors.length < totalMeteors) spawnMeteor();
+    nextStoneTimer = now + rand(CFG.METEOR_SPAWN_MIN, CFG.METEOR_SPAWN_MAX);
   }
 
-  // ── 拾取能量石 ──
-  for (var i = energyStones.length - 1; i >= 0; i--) {
-    var es = energyStones[i];
-    es.pos.y += es.vy * (dt / 16);
-    es.life--;
-    if (dist(es.pos, player) < 28) {
-      if (es.tier === 2) {
-        // 3级能量石碰到即死，只能机械臂抓取
-        gameOver('被能量石撞毁！💎');
-        return;
-      }
-      var pts = CFG.STONE_SCORES[es.tier];
-      score += pts;
-      floatingTxt.push({ x: es.pos.x, y: es.pos.y, text: '+' + pts, life: 60, vy: -2 });
-      spawnParticles(es.pos.x, es.pos.y, '#ff0', 8);
-      energyStones.splice(i, 1);
+  // ── 拾取陨石（碰到不死的，机械臂也可抓）──
+  for (var i = meteors.length - 1; i >= 0; i--) {
+    var mt = meteors[i];
+    mt.pos.y += mt.vy * (dt / 16);
+    mt.life--;
+    if (dist(mt.pos, player) < 28) {
+      var pts2 = CFG.METEOR_SCORES[mt.tier];
+      score += pts2;
+      floatingTxt.push({ x: mt.pos.x, y: mt.pos.y, text: '+' + pts2, life: 60, vy: -2 });
+      spawnParticles(mt.pos.x, mt.pos.y, '#ff0', 8);
+      meteors.splice(i, 1);
       updateHUD();
       continue;
     }
-    if (es.life <= 0 || es.pos.y > CFG.WORLD_H + 60) {
-      energyStones.splice(i, 1);
+    if (mt.life <= 0 || mt.pos.y > CFG.WORLD_H + 60) {
+      meteors.splice(i, 1);
     }
   }
 
@@ -999,28 +998,26 @@ function render() {
     ctx.restore();
   }
 
-  // ── 能量石 ──
-  for (var i = 0; i < energyStones.length; i++) {
-    var es = energyStones[i];
-    var ess = w2s(es.pos.x, es.pos.y);
-    var bob = M.sin(es.bob + gameTime * 0.03) * 4;
-    var key = 'stone' + es.tier;
-    if (images[key]) {
-      ctx.drawImage(images[key], ess.x - 22, ess.y + bob - 22, 44, 44);
+  // ── 彩色陨石 ──
+  var meteorKeys = ['meteor0', 'meteor1', 'meteor2'];
+  for (var i = 0; i < meteors.length; i++) {
+    var mt = meteors[i];
+    var mts = w2s(mt.pos.x, mt.pos.y);
+    var bob = M.sin(mt.bob + gameTime * 0.03) * 4;
+    if (images[meteorKeys[mt.tier]]) {
+      ctx.drawImage(images[meteorKeys[mt.tier]], mts.x - 22, mts.y + bob - 22, 44, 44);
     } else {
-      var stoneColors = ['#4af', '#fa4', '#f4f'];
-      ctx.fillStyle = stoneColors[es.tier];
+      var mcolors = ['#f44', '#4af', '#fd4'];
+      ctx.fillStyle = mcolors[mt.tier];
       ctx.beginPath();
-      ctx.arc(ess.x, ess.y + bob, 14 + es.tier * 5, 0, M.PI * 2);
+      ctx.arc(mts.x, mts.y + bob, 16, 0, M.PI * 2);
       ctx.fill();
     }
-    // 3级能量石危险标记
-    if (es.tier === 2) {
-      ctx.fillStyle = '#f00';
-      ctx.font = 'bold 11px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('💀', ess.x, ess.y + bob - 24);
-    }
+    // 分数标签
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('+' + CFG.METEOR_SCORES[mt.tier], mts.x, mts.y + bob - 22);
   }
 
   // ── 陨石 ──
@@ -1224,8 +1221,8 @@ function render() {
     ctx.fill();
     ctx.stroke();
 
-    // 抓到石头时拖拽显示
-    if (armGrabbed !== null && energyStones.indexOf(armGrabbed) >= 0) {
+    // 抓到陨石时拖拽显示
+    if (armGrabbed !== null && meteors.indexOf(armGrabbed) >= 0) {
       armGrabbed.pos.x = player.x + M.cos(armAngle) * armLength;
       armGrabbed.pos.y = player.y + M.sin(armAngle) * armLength;
     }
@@ -1316,7 +1313,7 @@ resize();
 window.addEventListener('resize', resize);
 
 // ── 加载图片 ──
-var imgList = { p: '主角.png', m: '大地图.jpg', r: '红色外星人.png', g: '绿色外星人.png', prince: '小王子.png', flower: '小花.png', bolt: '闪电.png', pack: '能量包.png', comet: '陨石.png', stone0: '等级1能量石.png', stone1: '等级2能量石.png', stone2: '等级3能量石.png' };
+var imgList = { p: '主角.png', m: '大地图.jpg', r: '红色外星人.png', g: '绿色外星人.png', prince: '小王子.png', flower: '小花.png', bolt: '闪电.png', pack: '能量包.png', comet: '陨石.png', meteor0: '陨石红.png', meteor1: '陨石蓝.png', meteor2: '陨石金.png' };
 var imgKeys = Object.keys(imgList);
 var imgLoaded = 0;
 
