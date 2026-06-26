@@ -175,6 +175,7 @@ var princeTimer = 0;       // 动画计时器
 var countdownStart = 0;    // 倒计时开始时间
 var plantedFlowers = [];   // 永久种植的小花
 var redCount = 5;          // 当前关卡红外星人目标数
+var armHint = true;        // 抓取提示是否显示
 var level     = 1;
 var score     = 0;
 var mouseShoot = false;
@@ -354,6 +355,7 @@ function startGame() {
   shakeAmt = 0;
   ammoSpawned = 0; boostSpawned = 0;
   armState = 'idle'; armLength = 0; armGrabbed = null; armSlow = 1;
+  armHint = true;
 
   initLevel(1);
 }
@@ -380,6 +382,7 @@ function levelWin() {
 
 function deployArm() {
   if (armState !== 'idle' || !player) return;
+  armHint = false;
   armState = 'extending';
   armLength = 0;
   armAngle = player.heading;
@@ -1232,6 +1235,22 @@ function render() {
     ctx.fillText(ft.text, fts.x, fts.y);
   }
   ctx.globalAlpha = 1;
+
+  // ── 抓取提示 ──
+  if (armHint && stars.length > 0 && state === 'play') {
+    var pulse = M.sin(Date.now() / 400) * 0.3 + 0.7;
+    // 画圈高亮按钮
+    ctx.strokeStyle = 'rgba(255,200,50,' + pulse + ')';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(screenW - 46, screenH - 138, 38, 0, M.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,220,80,' + (0.7 + pulse * 0.3) + ')';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('点按抓取', screenW - 46, screenH - 185);
+  }
 
   // ── 倒计时覆盖 ──
   if (state === 'countdown') {
