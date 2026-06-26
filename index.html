@@ -175,7 +175,6 @@ var princePhase = 0;       // 小王子动画阶段
 var princeTimer = 0;       // 动画计时器
 var countdownStart = 0;    // 倒计时开始时间
 var plantedFlowers = [];   // 永久种植的小花
-var princessActive = false; // 公主是否已出场
 var redCount = 5;          // 当前关卡红外星人目标数
 var armHint = true;        // 抓取提示
 var boostHint = true;      // 闪电提示
@@ -370,7 +369,6 @@ function startGame() {
   ammoSpawned = 0; boostSpawned = 0;
   armState = 'idle'; armLength = 0; armGrabbed = null; armSlow = 1;
   armHint = true; boostHint = true; ammoHint = true; hintPause = false; hintMsg = '';
-  princessActive = false;
 
   initLevel(1);
 }
@@ -525,7 +523,6 @@ function update(dt) {
     // 倒计时结束 → 下一关
     if (Date.now() - countdownStart > CFG.COUNTDOWN_SEC * 1000) {
       plantedFlowers.push(level);
-      if (plantedFlowers.length >= 1) princessActive = true; // 测试，之后改回99
       // 65%概率+1，35%概率+2
       redCount += M.random() < 0.65 ? 1 : 2;
       level++;
@@ -979,7 +976,7 @@ function render() {
   var fp = w2s(flowerPlanet.x, flowerPlanet.y);
   var pr2 = flowerPlanet.r;
   var ARC_RIGHT = 10 * M.PI / 180;   // 星球右侧
-  var ARC_BOTTOM = 55 * M.PI / 180;  // 星球右下弧面
+  
   var ARC_STEP  = 14 * M.PI / 180;
 
   if (images.flower) {
@@ -1024,7 +1021,7 @@ function render() {
       ctx.restore();
       // 公主：首次王子到位后1.5x速赶来，之后一起出发
       // 公主走在王子右侧
-      if (plantedFlowers.length >= 0 && images.princess) { // TODO: 改回98
+      if (plantedFlowers.length >= 98 && images.princess) { // 第99朵起公主出现
         var pssX, pssY;
         if (plantedFlowers.length === 0) {
           var pssProgress = M.min(1, M.max(0, walkProgress - 0.7) / 0.3 * 1.5);
@@ -1036,8 +1033,7 @@ function render() {
         }
         ctx.save(); ctx.translate(pssX, pssY);
         ctx.globalAlpha = 1;
-        ctx.fillStyle = '#f0f';
-        ctx.beginPath(); ctx.arc(0, -25, 18, 0, M.PI*2); ctx.fill();
+        if (images.princess) ctx.drawImage(images.princess, -20, -50, 40, 55);
         ctx.restore();
       }
     }
