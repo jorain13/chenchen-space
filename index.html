@@ -78,7 +78,7 @@ var CFG = {
   JUNK_COUNT_SCALE: 1,        // +1 per level
 
   // ── 地球回血 ──
-  HEAL_RATE: 10,              // HP per second
+  HEAL_RATE: 20,              // HP per second
 
   // ── 小星星 ──
   STAR_SCORES: [50, 100, 300, 500],      // 等级1-4 分值
@@ -130,7 +130,7 @@ function spawnAtEdge() {
 }
 
 function nearEarth(pos) {
-  return dist(pos, EARTH) < EARTH.r;
+  return dist(pos, EARTH) < EARTH.r * 1.8;
 }
 
 /** 粒子特效 */
@@ -544,7 +544,11 @@ function update(dt) {
 
   // ── 地球回血 ──
   if (nearEarth(player)) {
-    player.hp = M.min(CFG.PLAYER_HP, player.hp + CFG.HEAL_RATE * (dt / 1000));
+    var healAmt = CFG.HEAL_RATE * (dt / 1000);
+    player.hp = M.min(CFG.PLAYER_HP, player.hp + healAmt);
+    if (M.floor(gameTime / 500) % 2 === 0) {
+      spawnParticles(player.x, player.y, '#6f0', 1);
+    }
     updateHUD();
   }
 
