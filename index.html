@@ -70,7 +70,6 @@ var CFG = {
   RED_BULLET_DMG: 10,         // 1/10 of max HP
   RED_BULLET_SPEED: 3.5,
   RED_BASE_COUNT: 5,          // level 1 count
-  RED_COUNT_SCALE: 3,         // +3 per level
   RED_AGGRO_RANGE: 180,       // 进入此范围后转为追击模式
 
   // ── 宇宙垃圾 ──
@@ -175,6 +174,7 @@ var princePhase = 0;       // 小王子动画阶段
 var princeTimer = 0;       // 动画计时器
 var countdownStart = 0;    // 倒计时开始时间
 var plantedFlowers = [];   // 永久种植的小花
+var redCount = 5;          // 当前关卡红外星人目标数
 var level     = 1;
 var score     = 0;
 var mouseShoot = false;
@@ -194,7 +194,7 @@ var boostSpawned = 0;      // 本关已生成闪电数
 var nextStoneTimer  = 0;
 
 // ── 地球 & 行星（固定位置）──
-var EARTH = { x: CFG.WORLD_W * 0.22, y: CFG.WORLD_H * 0.78, r: 40 };
+var EARTH = { x: CFG.WORLD_W * 0.32, y: CFG.WORLD_H * 0.72, r: 38 };
 var PLANETS = [
   { x: CFG.WORLD_W * 0.16, y: CFG.WORLD_H * 0.26, r: 24 },
   { x: CFG.WORLD_W * 0.84, y: CFG.WORLD_H * 0.37, r: 28 },
@@ -211,7 +211,7 @@ var PLANETS = [
 /** 按关卡计算难度参数 */
 function levelConfig(lv) {
   return {
-    redMax:    CFG.RED_BASE_COUNT + (lv - 1) * CFG.RED_COUNT_SCALE,
+    redMax:    redCount,
     redSpeed:  0.5 + lv * 0.2,
     redHP:     lv <= 3 ? 9 : lv <= 6 ? 12 : lv <= 10 ? 15 : 21,
     redCD:     M.max(600, 1800 - lv * 100),
@@ -346,6 +346,7 @@ function startGame() {
   lastShot = 0;
   score = 0;
   level = 1;
+  redCount = CFG.RED_BASE_COUNT;
   state = 'play';
   plantedFlowers = [];
   countdownStart = 0;
@@ -505,6 +506,8 @@ function update(dt) {
     // 倒计时结束 → 下一关
     if (Date.now() - countdownStart > CFG.COUNTDOWN_SEC * 1000) {
       plantedFlowers.push(level);
+      // 65%概率+1，35%概率+2
+      redCount += M.random() < 0.65 ? 1 : 2;
       level++;
       player.hp   = M.min(CFG.PLAYER_HP, player.hp + 30);
       player.ammo = M.min(CFG.PLAYER_AMMO, player.ammo + 30);
