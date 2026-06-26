@@ -587,7 +587,7 @@ function update(dt) {
 
   // ── 玩家碰撞检测 ──
   for (var i = 0; i < redAliens.length; i++) {
-    if (dist(player, redAliens[i].pos) < 32) { gameOver('撞到红色外星人'); return; }
+    if (!redAliens[i].dying && dist(player, redAliens[i].pos) < 32) { gameOver('撞到红色外星人'); return; }
   }
   for (var i = 0; i < greenAliens.length; i++) {
     if (dist(player, greenAliens[i].pos) < 32) { gameOver('撞到绿色外星人'); return; }
@@ -597,18 +597,18 @@ function update(dt) {
   }
   for (var i = bombs.length - 1; i >= 0; i--) {
     if (dist(player, bombs[i].pos) < 28) {
-      // 炸弹爆炸：以火箭为中心，机械臂最长距离为半径，炸死所有红外星人
+      // 炸弹爆炸：范围红外星人变黑后消失
       var blastR = CFG.ARM_MAX_LEN + 50;
       for (var j = redAliens.length - 1; j >= 0; j--) {
         if (dist(player, redAliens[j].pos) < blastR) {
-          spawnParticles(redAliens[j].pos.x, redAliens[j].pos.y, '#f80', 20);
-          redAliens.splice(j, 1);
+          redAliens[j].dying = 30; // 变黑倒计时
         }
       }
       spawnParticles(player.x, player.y, '#f80', 30);
       bombs.splice(i, 1);
       updateHUD();
-      if (!redAliens.length) { levelWin(); return; }
+      // 检查是否所有活着的红外星人都死了
+      if (!redAliens.some(function(a){ return !a.dying; })) { levelWin(); return; }
     }
   }
   // ── 玩家子弹 ──
@@ -637,7 +637,7 @@ function update(dt) {
           spawnParticles(a.pos.x, a.pos.y, '#f84', 25);
           redAliens.splice(j, 1);
           updateHUD();
-          if (!redAliens.length) { levelWin(); return; }
+          if (!redAliens.some(function(a){ return !a.dying; })) { levelWin(); return; }
         }
       }
     }
@@ -684,8 +684,14 @@ function update(dt) {
   }
 
   // ── 红色外星人 AI（游走 / 追击 / 攻击）──
-  for (var i = 0; i < redAliens.length; i++) {
+  for (var i = redAliens.length - 1; i >= 0; i--) {
     var r = redAliens[i];
+    // 炸弹死亡动画
+    if (r.dying) {
+      r.dying--;
+      if (r.dying <= 0) { spawnParticles(r.pos.x, r.pos.y, '#000', 10); redAliens.splice(i, 1); }
+      continue;
+    }
     var spd = r.speed;
 
     // 进入范围 → 切换追击模式
@@ -1061,7 +1067,7 @@ function render() {
     ctx.beginPath(); ctx.arc(bms.x, bms.y, 28, 0, M.PI*2); ctx.fill();
     // 炸弹本体
     if (images.bomb) {
-      ctx.drawImage(images.bomb, bms.x - 24, bms.y - 22, 48, 44);
+      ctx.drawImage(images.bomb, bms.x - 35, bms.y - 32, 70, 64);
     } else {
       ctx.fillStyle = '#333';
       ctx.beginPath(); ctx.arc(bms.x, bms.y, 18, 0, M.PI*2); ctx.fill();
@@ -1150,7 +1156,15 @@ function render() {
   for (var i = 0; i < redAliens.length; i++) {
     var r = redAliens[i];
     var rs = w2s(r.pos.x, r.pos.y);
-    if (images.r) {
+    if (r.dying) {
+      // 炸弹触发后变黑闪烁
+      ctx.globalAlpha = r.dying % 6 < 3 ? 0.3 : 0.8;
+      ctx.fillStyle = '#111';
+      ctx.beginPath();
+      ctx.arc(rs.x, rs.y, 18, 0, M.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    } else if (images.r) {
       ctx.save();
       ctx.translate(rs.x, rs.y);
       ctx.rotate(angleTo(r.pos, player) + M.PI / 2);
@@ -1162,12 +1176,11 @@ function render() {
       ctx.arc(rs.x, rs.y, 18, 0, M.PI * 2);
       ctx.fill();
     }
-    // HP 条
+    // HP 条（红色）
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(rs.x - 14, rs.y - 26, 28, 4);
-    var hpRatio = r.hp / r.maxHp;
-    ctx.fillStyle = hpRatio > 0.5 ? '#5f5' : hpRatio > 0.25 ? '#fa3' : '#f33';
-    ctx.fillRect(rs.x - 14, rs.y - 26, 28 * hpRatio, 4);
+    ctx.fillStyle = '#f33';
+    ctx.fillRect(rs.x - 14, rs.y - 26, 28 * (r.hp / r.maxHp), 4);
   }
 
   // ── 绿色外星人 ──
