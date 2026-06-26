@@ -176,6 +176,7 @@ var countdownStart = 0;    // 倒计时开始时间
 var plantedFlowers = [];   // 永久种植的小花
 var redCount = 5;          // 当前关卡红外星人目标数
 var armHint = true;        // 抓取提示是否显示
+var hintPause = false;     // 是否暂停等待抓取教学
 var level     = 1;
 var score     = 0;
 var mouseShoot = false;
@@ -355,7 +356,7 @@ function startGame() {
   shakeAmt = 0;
   ammoSpawned = 0; boostSpawned = 0;
   armState = 'idle'; armLength = 0; armGrabbed = null; armSlow = 1;
-  armHint = true;
+  armHint = true; hintPause = false;
 
   initLevel(1);
 }
@@ -383,6 +384,7 @@ function levelWin() {
 function deployArm() {
   if (armState !== 'idle' || !player) return;
   armHint = false;
+  hintPause = false;
   armState = 'extending';
   armLength = 0;
   armAngle = player.heading;
@@ -526,6 +528,7 @@ function update(dt) {
     }
   }
   if (state !== 'play' && state !== 'countdown') return;
+  if (hintPause) return; // 教学暂停，等按机械臂
   var now = Date.now();
   gameTime += dt;
   if (shakeAmt > 0) shakeAmt = M.max(0, shakeAmt - dt / 200);
@@ -785,7 +788,9 @@ function update(dt) {
   var starQuota = CFG.STAR_BASE + (level - 1) * CFG.STAR_SCALE;
   if (now > nextStoneTimer && stars.length < starQuota) {
     spawnStar();
-    if (stars.length < starQuota) spawnStar(); // 每次生成2颗加速填充
+    if (stars.length < starQuota) spawnStar();
+    // 第一次出现星星→暂停教学
+    if (armHint && stars.length > 0) { hintPause = true; }
     nextStoneTimer = now + rand(CFG.STAR_SPAWN_MIN, CFG.STAR_SPAWN_MAX);
   }
 
@@ -1236,20 +1241,45 @@ function render() {
   }
   ctx.globalAlpha = 1;
 
-  // ── 抓取提示 ──
-  if (armHint && stars.length > 0 && state === 'play') {
-    var pulse = M.sin(Date.now() / 400) * 0.3 + 0.7;
-    // 画圈高亮按钮
-    ctx.strokeStyle = 'rgba(255,200,50,' + pulse + ')';
-    ctx.lineWidth = 3;
-    ctx.setLineDash([]);
+  // ── 抓取教学暂停 ──
+  if (hintPause) {
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, 0, screenW, screenH);
+    // 箭头从屏幕中央指向按钮
+    var tx = screenW - 46, ty = screenH - 138;
+    var fx = screenW / 2, fy = screenH / 2;
+    var pulse = M.sin(Date.now() / 300) * 0.4 + 0.6;
+    ctx.strokeStyle = 'rgba(255,220,50,' + pulse + ')';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([8, 4]);
     ctx.beginPath();
-    ctx.arc(screenW - 46, screenH - 138, 38, 0, M.PI * 2);
+    ctx.moveTo(fx, fy);
+    ctx.lineTo(tx - 30, ty + 5);
     ctx.stroke();
-    ctx.fillStyle = 'rgba(255,220,80,' + (0.7 + pulse * 0.3) + ')';
-    ctx.font = 'bold 14px sans-serif';
+    ctx.setLineDash([]);
+    // 箭头尖
+    ctx.fillStyle = 'rgba(255,220,50,' + pulse + ')';
+    ctx.beginPath();
+    ctx.moveTo(tx - 20, ty - 10);
+    ctx.lineTo(tx + 2, ty + 5);
+    ctx.lineTo(tx - 20, ty + 20);
+    ctx.closePath();
+    ctx.fill();
+    // 按钮光圈
+    ctx.strokeStyle = 'rgba(255,200,50,' + pulse + ')';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(tx, ty, 42, 0, M.PI * 2);
+    ctx.stroke();
+    // 文字
+    ctx.fillStyle = '#ff0';
+    ctx.font = 'bold 20px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('点按抓取', screenW - 46, screenH - 185);
+    ctx.fillText('👆 按键抓取', tx, ty - 55);
+    ctx.fillStyle = '#fff';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('点击右侧按钮', screenW / 2, screenH * 0.65);
+    ctx.fillText('用机械臂抓星星', screenW / 2, screenH * 0.65 + 22);
   }
 
   // ── 倒计时覆盖 ──
@@ -1374,6 +1404,7 @@ try { document.body.scrollIntoView(); } catch(e) {}
 
 canvas.addEventListener('touchstart', function(e) {
   e.preventDefault();
+  if (hintPause) return;
   if (state !== 'play' && state !== 'countdown') return;
   for (var i = 0; i < e.touches.length; i++) {
     var t = e.touches[i];
