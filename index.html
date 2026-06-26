@@ -156,7 +156,9 @@ var particles   = [];
 var camera  = { x: 0, y: 0 };
 var lastFrame = 0;
 var lastShot  = 0;
-var state     = 'title';   // 'title' | 'play' | 'over'
+var state     = 'title';   // 'title' | 'play' | 'over' | 'prince'
+var princePhase = 0;       // 小王子动画阶段
+var princeTimer = 0;       // 动画计时器
 var level     = 1;
 var score     = 0;
 var mouseShoot = false;
@@ -238,7 +240,7 @@ function spawnComet() {
     pos: { x: x, y: y },
     vx: M.cos(dir) * rand(2, 4),
     vy: M.sin(dir) * rand(2, 4),
-    radius: rand(8, 14),
+    radius: rand(18, 30),
     life: 300
   });
 }
@@ -327,22 +329,17 @@ function gameOver(reason) {
 
 function levelWin() {
   score += level * 200;
-  setTimeout(function() {
-    level++;
-    player.hp   = M.min(CFG.PLAYER_HP, player.hp + 30);
-    player.ammo = M.min(CFG.PLAYER_AMMO, player.ammo + 30);
-    player.invUntil = Date.now() + 5000;
-    player.speed = CFG.PLAYER_SPEED;
-    player.boostUntil = 0;
-    player.bulletSpeed = CFG.BULLET_SPEED_MAX;
-    player.rapidFireUntil = 0;
-    initLevel(level);
-    state = 'play';
-    updateHUD();
-  }, 1500);
+  // 触发小王子场景
+  state = 'prince';
+  princePhase = 0;
+  princeTimer = Date.now();
 }
 
 function updateHUD() {
+  if (state === 'prince') {
+    document.getElementById('info').textContent = '🌸 第' + level + '关 通过！';
+    return;
+  }
   if (!player) return;
   document.getElementById('hp').textContent   = '❤️' + M.max(0, M.round(player.hp));
   document.getElementById('ammo').textContent = '🔫' + player.ammo;
@@ -399,6 +396,26 @@ function playerFire(now, force) {
 // ============================================================
 
 function update(dt) {
+  if (state === 'prince') {
+    // 小王子动画计时，完成后进入下一关
+    var elapsed = Date.now() - princeTimer;
+    if (elapsed > 3500) {
+      level++;
+      player.hp   = M.min(CFG.PLAYER_HP, player.hp + 30);
+      player.ammo = M.min(CFG.PLAYER_AMMO, player.ammo + 30);
+      player.invUntil = Date.now() + 5000;
+      player.speed = CFG.PLAYER_SPEED;
+      player.boostUntil = 0;
+      player.bulletSpeed = CFG.BULLET_SPEED_MAX;
+      player.rapidFireUntil = 0;
+      initLevel(level);
+      state = 'play';
+      updateHUD();
+    }
+    // 分阶段：0=飞行(0-1500) 1=种花(1500-3500)
+    princePhase = elapsed < 1500 ? 0 : 1;
+    return;
+  }
   if (state !== 'play') return;
   var now = Date.now();
   gameTime += dt;
@@ -589,7 +606,7 @@ function update(dt) {
 
   // ── 随机能量包 ──
   if (now > nextPickupTimer) {
-    var types = ['boost', 'ammo', 'ammo'];
+    var types = ['boost', 'boost', 'ammo', 'ammo'];
     pickups.push({
       pos: { x: rand(80, CFG.WORLD_W - 80), y: rand(80, CFG.WORLD_H - 80) },
       type: types[M.floor(M.random() * 3)],
@@ -743,6 +760,55 @@ function render() {
     ctx.setLineDash([]);
   }
 
+  // ── 小王子场景 ──
+  if (state === 'prince') {
+    var bigPlanet = PLANETS[1]; // 右侧大星球
+    var bp = w2s(bigPlanet.x, bigPlanet.y);
+    var elapsed = Date.now() - princeTimer;
+    var t = elapsed / 1000;
+
+    if (princePhase === 0) {
+      // 阶段0：小王子从右侧飞来
+      var flyX = bp.x + 200 - t * 120; // 从右边飞入
+      var flyY = bp.y - 60 + M.sin(t * 3) * 20;
+      if (flyX < bp.x + 10) flyX = bp.x + 10;
+      if (images.prince) {
+        ctx.save();
+        ctx.translate(flyX, flyY);
+        ctx.drawImage(images.prince, -20, -30, 40, 50);
+        ctx.restore();
+      }
+    } else {
+      // 阶段1：小王子站在星球上种花
+      var princeX = bp.x + 10;
+      var princeY = bp.y - bigPlanet.r - 10;
+      if (images.prince) {
+        ctx.save();
+        ctx.translate(princeX, princeY);
+        ctx.drawImage(images.prince, -18, -35, 36, 45);
+        ctx.restore();
+      }
+      // 花朵在星球表面
+      if (images.flower) {
+        for (var f = 0; f < 3; f++) {
+          var fx = bp.x - 10 + f * 16;
+          var fy = bp.y - bigPlanet.r + 4 + M.sin(t * 2 + f) * 3;
+          ctx.save();
+          ctx.translate(fx, fy);
+          ctx.drawImage(images.flower, -10, -14, 20, 22);
+          ctx.restore();
+        }
+      }
+    }
+
+    // 提示文字
+    ctx.fillStyle = 'rgba(255,255,200,0.9)';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    var msg = princePhase === 0 ? '🌹 小王子来了...' : '🌸 小王子种下了小花！';
+    ctx.fillText(msg, bp.x, bp.y - bigPlanet.r - 50);
+  }
+
   // ── 宇宙垃圾 ──
   for (var i = 0; i < spaceJunk.length; i++) {
     var jk = spaceJunk[i];
@@ -799,23 +865,31 @@ function render() {
     var bob = M.sin(pk.life * 0.1) * 6;
     var py = ps.y + bob;
     if (pk.type === 'boost') {
-      ctx.fillStyle = '#fd0';
-      ctx.beginPath();
-      ctx.arc(ps.x, py, 14, 0, M.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 16px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('⚡', ps.x, py + 5);
+      if (images.bolt) {
+        ctx.drawImage(images.bolt, ps.x - 16, py - 16, 32, 32);
+      } else {
+        ctx.fillStyle = '#fd0';
+        ctx.beginPath();
+        ctx.arc(ps.x, py, 14, 0, M.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚡', ps.x, py + 5);
+      }
     } else {
-      ctx.fillStyle = '#4f8';
-      ctx.beginPath();
-      ctx.arc(ps.x, py, 12, 0, M.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 14px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('🔫', ps.x, py + 4);
+      if (images.pack) {
+        ctx.drawImage(images.pack, ps.x - 14, py - 14, 28, 28);
+      } else {
+        ctx.fillStyle = '#4f8';
+        ctx.beginPath();
+        ctx.arc(ps.x, py, 12, 0, M.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🔫', ps.x, py + 4);
+      }
     }
   }
 
@@ -997,7 +1071,7 @@ resize();
 window.addEventListener('resize', resize);
 
 // ── 加载图片 ──
-var imgList = { p: '主角.png', m: '大地图.png', r: '红色外星人.png', g: '绿色外星人.png' };
+var imgList = { p: '主角.png', m: '大地图.png', r: '红色外星人.png', g: '绿色外星人.png', prince: '小王子.png', flower: '小花.png', bolt: '闪电.png', pack: '能量包.png' };
 var imgKeys = Object.keys(imgList);
 var imgLoaded = 0;
 
