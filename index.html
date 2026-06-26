@@ -1416,7 +1416,8 @@ function render() {
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.strokeStyle = 'rgba(255,100,0,0.7)';
     ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.roundRect(bx - 20, by - 18, 40, 36, 8); ctx.fill(); ctx.stroke();
+    ctx.fillRect(bx - 20, by - 18, 40, 36);
+    ctx.strokeRect(bx - 20, by - 18, 40, 36);
     ctx.fillStyle = '#fff';
     ctx.font = '20px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('💣', bx, by + 8);
