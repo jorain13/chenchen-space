@@ -162,7 +162,8 @@ var spaceJunk   = [];
 var bullets     = [];
 var enemyBullets = [];
 var pickups     = [];
-var stars      = [];   // 小星星（可触碰+机械臂抓取）
+var stars      = [];   // 小星星
+var bombs      = [];   // 炸弹（碰到即死）
 var floatingTxt  = [];
 var particles   = [];
 
@@ -319,6 +320,12 @@ function initLevel(lv) {
   stars = [];
   floatingTxt = [];
   particles = [];
+  // 炸弹：每关1-5个
+  bombs = [];
+  var bombN = 1 + M.floor(M.random() * 5);
+  for (i = 0; i < bombN; i++) {
+    bombs.push({ pos: { x: rand(60, CFG.WORLD_W - 60), y: rand(60, CFG.WORLD_H - 60) }, life: 900 });
+  }
 
   // 每关能量包+闪电配额：第1关各3个，之后每关各+1
   ammoSpawned = 0;
@@ -587,6 +594,22 @@ function update(dt) {
   }
   for (var i = 0; i < spaceJunk.length; i++) {
     if (dist(player, spaceJunk[i].pos) < spaceJunk[i].radius + 14) { gameOver('撞到太空垃圾'); return; }
+  }
+  for (var i = bombs.length - 1; i >= 0; i--) {
+    if (dist(player, bombs[i].pos) < 28) {
+      // 炸弹爆炸：以火箭为中心，机械臂最长距离为半径，炸死所有红外星人
+      var blastR = CFG.ARM_MAX_LEN + 50;
+      for (var j = redAliens.length - 1; j >= 0; j--) {
+        if (dist(player, redAliens[j].pos) < blastR) {
+          spawnParticles(redAliens[j].pos.x, redAliens[j].pos.y, '#f80', 20);
+          redAliens.splice(j, 1);
+        }
+      }
+      spawnParticles(player.x, player.y, '#f80', 30);
+      bombs.splice(i, 1);
+      updateHUD();
+      if (!redAliens.length) { levelWin(); return; }
+    }
   }
   // ── 玩家子弹 ──
   for (var i = bullets.length - 1; i >= 0; i--) {
@@ -990,6 +1013,14 @@ function render() {
       ctx.save(); ctx.translate(prX, prY);
       ctx.drawImage(images.prince, -22, -55, 44, 55);
       ctx.restore();
+      // 第99朵花起公主出现，第100朵起一起出现
+      if (plantedFlowers.length >= 98 && images.princess) {
+        var pssX = prX - 30;
+        var pssY = prY;
+        ctx.save(); ctx.translate(pssX, pssY);
+        ctx.drawImage(images.princess, -22, -55, 44, 55);
+        ctx.restore();
+      }
       ctx.globalAlpha = 1;
     }
   }
@@ -1015,6 +1046,21 @@ function render() {
     ctx.fill();
     ctx.stroke();
     ctx.restore();
+  }
+
+  // ── 炸弹 ──
+  for (var i = 0; i < bombs.length; i++) {
+    var bm = bombs[i];
+    var bms = w2s(bm.pos.x, bm.pos.y);
+    if (images.bomb) {
+      ctx.drawImage(images.bomb, bms.x - 18, bms.y - 16, 36, 32);
+    } else {
+      ctx.fillStyle = '#222';
+      ctx.beginPath(); ctx.arc(bms.x, bms.y, 14, 0, M.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f00';
+      ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('💣', bms.x, bms.y + 4);
+    }
   }
 
   // ── 小星星 ──
@@ -1370,7 +1416,7 @@ resize();
 window.addEventListener('resize', resize);
 
 // ── 加载图片 ──
-var imgList = { p: '主角.png', m: '大地图.jpg', r: '红色外星人.png', g: '绿色外星人.png', prince: '小王子.png', flower: '小花.png', bolt: '闪电.png', pack: '能量包.png', star0: '等级1小星星.png', star1: '等级2小星星.png', star2: '等级4小星星.png' };
+var imgList = { p: '主角.png', m: '大地图.jpg', r: '红色外星人.png', g: '绿色外星人.png', prince: '小王子.png', princess: '公主.png', flower: '小花.png', bolt: '闪电.png', pack: '能量包.png', bomb: '炸弹.png', star0: '等级1小星星.png', star1: '等级2小星星.png', star2: '等级4小星星.png' };
 var imgKeys = Object.keys(imgList);
 var imgLoaded = 0;
 
