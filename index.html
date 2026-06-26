@@ -682,6 +682,7 @@ document.addEventListener('touchmove', (e) => {
 
 // Touch end / cancel
 document.addEventListener('touchend', (e) => {
+  if (gameState !== 'playing') return;
   e.preventDefault();
   for (const touch of e.changedTouches) {
     const type = activeTouches.get(touch.identifier);
