@@ -175,6 +175,7 @@ var princePhase = 0;       // 小王子动画阶段
 var princeTimer = 0;       // 动画计时器
 var countdownStart = 0;    // 倒计时开始时间
 var plantedFlowers = [];   // 永久种植的小花
+var princessActive = false; // 公主是否已出场
 var redCount = 5;          // 当前关卡红外星人目标数
 var armHint = true;        // 抓取提示
 var boostHint = true;      // 闪电提示
@@ -369,6 +370,7 @@ function startGame() {
   ammoSpawned = 0; boostSpawned = 0;
   armState = 'idle'; armLength = 0; armGrabbed = null; armSlow = 1;
   armHint = true; boostHint = true; ammoHint = true; hintPause = false; hintMsg = '';
+  princessActive = false;
 
   initLevel(1);
 }
@@ -523,6 +525,7 @@ function update(dt) {
     // 倒计时结束 → 下一关
     if (Date.now() - countdownStart > CFG.COUNTDOWN_SEC * 1000) {
       plantedFlowers.push(level);
+      if (plantedFlowers.length >= 1) princessActive = true; // TODO: 改回99
       // 65%概率+1，35%概率+2
       redCount += M.random() < 0.65 ? 1 : 2;
       level++;
@@ -1019,15 +1022,26 @@ function render() {
       ctx.save(); ctx.translate(prX, prY);
       ctx.drawImage(images.prince, -22, -55, 44, 55);
       ctx.restore();
-      // 第99朵起公主在右侧出现，王子到位后公主再过来
-      if (plantedFlowers.length >= 0 && images.princess && walkProgress > 0.8) { // TODO: 改回98
-        var pssX = prX + 35;
-        var pssY = prY;
-        var pssAlpha = (walkProgress - 0.8) / 0.2; // 王子快到时公主淡入
-        ctx.globalAlpha = M.min(1, pssAlpha) * pa;
-        ctx.save(); ctx.translate(pssX, pssY);
-        ctx.drawImage(images.princess, -30, -60, 60, 65);
-        ctx.restore();
+      // 公主：首次王子到位后1.5x速赶来，之后一起出发
+      if (princessActive && images.princess) {
+        var pssX, pssY, pssAlpha = 1;
+        if (plantedFlowers.length > 1) {
+          // 后续关卡：公主和王子一起从起点出发，挨在一起
+          pssX = (fwx + 85) + (prX + 35 - (fwx + 85)) * walkProgress;
+          pssY = (fwy - 15) + (prY - (fwy - 15)) * walkProgress;
+        } else {
+          // 首次：王子到位后公主1.5x速从右侧赶来
+          var pssProgress = M.min(1, M.max(0, walkProgress - 0.7) / 0.3 * 1.5);
+          pssX = (fwx + 85) + (prX + 35 - (fwx + 85)) * pssProgress;
+          pssY = (fwy - 15) + (prY - (fwy - 15)) * pssProgress;
+          pssAlpha = M.min(1, pssProgress * 2);
+        }
+        if (pssAlpha > 0) {
+          ctx.globalAlpha = M.min(1, pssAlpha) * pa;
+          ctx.save(); ctx.translate(pssX, pssY);
+          ctx.drawImage(images.princess, -30, -60, 60, 65);
+          ctx.restore();
+        }
       }
       ctx.globalAlpha = 1;
     }
