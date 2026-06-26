@@ -47,10 +47,21 @@ var CFG = {
   PLAYER_HP: 100,
   PLAYER_AMMO: 100,
   PLAYER_SPEED: 3.5,
-  PLAYER_BULLET_SPEED: 14,
-  PLAYER_FIRE_RATE: 60,      // ms between shots
   PLAYER_INVINCIBLE_MS: 600,
   PLAYER_DMG: 3,              // damage per bullet
+
+  // ── 射击（长按减速 + 能量弹连发）──
+  BULLET_SPEED_MAX: 14,       // 初始子弹速度
+  BULLET_SPEED_MIN: 4,        // 长按最低子弹速度
+  BULLET_SPEED_DECAY: 0.8,    // 每次射击减速量
+  BULLET_SPEED_RECOVER: 0.15, // 停火每帧恢复量
+  FIRE_RATE: 200,             // 正常射击间隔 ms
+  RAPID_FIRE_RATE: 40,        // 能量弹连发间隔 ms
+  RAPID_FIRE_DURATION: 5000,  // 能量弹持续时间 ms
+
+  // ── 闪电加速 ──
+  BOOST_SPEED: 10,            // 闪电加速后的速度
+  BOOST_DURATION: 4000,       // 闪电持续 ms
 
   // ── 红色外星人 ──
   RED_BULLET_DMG: 10,         // 1/10 of max HP
@@ -287,7 +298,9 @@ function startGame() {
     heading: -M.PI / 2,
     speed: CFG.PLAYER_SPEED,
     invUntil: Date.now() + 2000,
-    boostUntil: 0
+    boostUntil: 0,
+    bulletSpeed: CFG.BULLET_SPEED_MAX,
+    rapidFireUntil: 0
   };
 
   lastShot = 0;
@@ -321,6 +334,8 @@ function levelWin() {
     player.invUntil = Date.now() + 5000;
     player.speed = CFG.PLAYER_SPEED;
     player.boostUntil = 0;
+    player.bulletSpeed = CFG.BULLET_SPEED_MAX;
+    player.rapidFireUntil = 0;
     initLevel(level);
     state = 'play';
     updateHUD();
@@ -339,9 +354,19 @@ function updateHUD() {
 // ============================================================
 
 function playerFire(now, force) {
-  if (!player || player.ammo <= 0 || now - lastShot < 60 || !force) return;
+  if (!player || player.ammo <= 0 || !force) return;
+
+  // 能量弹：快速连发；正常：较慢射速
+  var inRapid = now < player.rapidFireUntil;
+  var fireRate = inRapid ? CFG.RAPID_FIRE_RATE : CFG.FIRE_RATE;
+  if (now - lastShot < fireRate) return;
+
   lastShot = now;
   player.ammo--;
+
+  // 长按减速：每次射击降低子弹速度
+  player.bulletSpeed = M.max(CFG.BULLET_SPEED_MIN, player.bulletSpeed - CFG.BULLET_SPEED_DECAY);
+  var spd = player.bulletSpeed;
 
   // 自动瞄准最近的红色外星人或宇宙垃圾
   var aimAngle = player.heading;
@@ -361,8 +386,8 @@ function playerFire(now, force) {
 
   bullets.push({
     pos: { x: player.x, y: player.y },
-    vx: M.cos(aimAngle) * CFG.PLAYER_BULLET_SPEED,
-    vy: M.sin(aimAngle) * CFG.PLAYER_BULLET_SPEED,
+    vx: M.cos(aimAngle) * spd,
+    vy: M.sin(aimAngle) * spd,
     life: 50
   });
 
@@ -401,7 +426,12 @@ function update(dt) {
   }
 
   // ── 射击 ──
-  if (mouseShoot) playerFire(now, true);
+  if (mouseShoot) {
+    playerFire(now, true);
+  } else {
+    // 松手后子弹速度逐渐恢复
+    player.bulletSpeed = M.min(CFG.BULLET_SPEED_MAX, player.bulletSpeed + CFG.BULLET_SPEED_RECOVER * (dt / 16));
+  }
 
   // ── 玩家碰撞检测 ──
   for (var i = 0; i < redAliens.length; i++) {
@@ -578,9 +608,13 @@ function update(dt) {
     if (dist(pk.pos, player) < 28) {
       if (pk.type === 'ammo') {
         player.ammo = M.min(CFG.PLAYER_AMMO, player.ammo + (player.ammo < 50 ? 50 : 20));
+        // 能量弹：触发快速连发
+        player.rapidFireUntil = now + CFG.RAPID_FIRE_DURATION;
+        player.bulletSpeed = CFG.BULLET_SPEED_MAX;
       } else {
-        player.speed = 7;
-        player.boostUntil = now + 3000;
+        // 闪电：移动速度大幅提升
+        player.speed = CFG.BOOST_SPEED;
+        player.boostUntil = now + CFG.BOOST_DURATION;
       }
       pickups.splice(i, 1);
       updateHUD();
@@ -652,7 +686,7 @@ function update(dt) {
   // ── 数值钳制 ──
   player.hp   = clamp(player.hp,   0, CFG.PLAYER_HP);
   player.ammo = clamp(player.ammo, 0, CFG.PLAYER_AMMO);
-  player.speed = clamp(player.speed, 1.6, 7);
+  player.speed = clamp(player.speed, 1.6, CFG.BOOST_SPEED);
 }
 
 // ============================================================
