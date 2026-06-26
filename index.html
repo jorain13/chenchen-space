@@ -1027,12 +1027,12 @@ function render() {
         var pssX, pssY, pssAlpha = 1;
         if (plantedFlowers.length > 1) {
           // 后续关卡：公主和王子一起从起点出发，挨在一起
-          pssX = (fwx + 85) + (prX + 35 - (fwx + 85)) * walkProgress;
+          pssX = (fwx + 85) + (prX + 22 - (fwx + 85)) * walkProgress;
           pssY = (fwy - 15) + (prY - (fwy - 15)) * walkProgress;
         } else {
           // 首次：王子到位后公主1.5x速从右侧赶来
           var pssProgress = M.min(1, M.max(0, walkProgress - 0.7) / 0.3 * 1.5);
-          pssX = (fwx + 85) + (prX + 35 - (fwx + 85)) * pssProgress;
+          pssX = (fwx + 85) + (prX + 22 - (fwx + 85)) * pssProgress;
           pssY = (fwy - 15) + (prY - (fwy - 15)) * pssProgress;
           pssAlpha = M.min(1, pssProgress * 2);
         }
@@ -1453,7 +1453,7 @@ resize();
 window.addEventListener('resize', resize);
 
 // ── 加载图片 ──
-var imgList = { p: '主角.png', m: '大地图.jpg', r: '红色外星人.png', g: '绿色外星人.png', prince: '小王子.png', princess: '公主.png', flower: '小花.png', bolt: '闪电.png', pack: '能量包.png', bomb: '炸弹.png', star0: '等级1小星星.png', star1: '等级2小星星.png', star2: '等级4小星星.png' };
+var imgList = { p: '主角.png', m: '大地图.jpg', r: '红色外星人.png', g: '绿色外星人.png', prince: '小王子.png', princess: '公主_v2.png', flower: '小花.png', bolt: '闪电.png', pack: '能量包.png', bomb: '炸弹.png', star0: '等级1小星星.png', star1: '等级2小星星.png', star2: '等级4小星星.png' };
 var imgKeys = Object.keys(imgList);
 var imgLoaded = 0;
 
