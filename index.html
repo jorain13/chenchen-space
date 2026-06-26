@@ -68,6 +68,7 @@ var CFG = {
   RED_BULLET_SPEED: 3.5,
   RED_BASE_COUNT: 3,          // level 1 count
   RED_COUNT_SCALE: 2,         // +2 per level
+  RED_AGGRO_RANGE: 180,       // 进入此范围后转为追击模式
 
   // ── 绿色外星人（修改规则在这里！）──
   GREEN_BULLET_IMMUNE: true,   // 子弹是否穿过（true=穿过无伤害）
@@ -202,9 +203,12 @@ function spawnRedAlien(cfg) {
   return {
     pos: { x: edge.x, y: edge.y },
     hp: cfg.redHP, maxHp: cfg.redHP,
-    lastShot: Date.now() + rand(0, 1500),
+    lastShot: Date.now() + rand(1500, 3000),
     cooldown: cfg.redCD + rand(-200, 300),
-    speed: cfg.redSpeed
+    speed: cfg.redSpeed,
+    hunting: false,                    // 是否追击模式
+    wanderAngle: edge.inAngle,         // 游走方向
+    wanderTimer: Date.now() + rand(1000, 3000)
   };
 }
 
@@ -544,36 +548,48 @@ function update(dt) {
     }
   }
 
-  // ── 红色外星人 AI ──
+  // ── 红色外星人 AI（游走 / 追击 / 攻击）──
   for (var i = 0; i < redAliens.length; i++) {
     var r = redAliens[i];
     var spd = r.speed;
 
-    // 远离地球
+    // 进入范围 → 切换追击模式
+    if (!r.hunting && dist(r.pos, player) < CFG.RED_AGGRO_RANGE) {
+      r.hunting = true;
+    }
+
+    // 远离地球（追击和游走都适用）
     if (dist(r.pos, EARTH) < EARTH.r + 40) {
       var ea = angleTo(EARTH, r.pos);
       r.pos.x += M.cos(ea) * 1.5 * (dt / 16);
       r.pos.y += M.sin(ea) * 1.5 * (dt / 16);
-    } else {
+    } else if (r.hunting) {
+      // 追击模式：追玩家 + 开火
       var ag = angleTo(r.pos, player);
       r.pos.x += M.cos(ag) * spd * (dt / 16);
       r.pos.y += M.sin(ag) * spd * (dt / 16);
+      if (now - r.lastShot >= r.cooldown) {
+        r.lastShot = now;
+        var bang = angleTo(r.pos, player);
+        enemyBullets.push({
+          pos: { x: r.pos.x, y: r.pos.y },
+          vx: M.cos(bang) * CFG.RED_BULLET_SPEED,
+          vy: M.sin(bang) * CFG.RED_BULLET_SPEED,
+          life: 110
+        });
+      }
+    } else {
+      // 游走模式：随机漫步
+      if (now > r.wanderTimer) {
+        r.wanderAngle = rand(0, M.PI * 2);
+        r.wanderTimer = now + rand(1000, 3000);
+      }
+      r.pos.x += M.cos(r.wanderAngle) * spd * 0.6 * (dt / 16);
+      r.pos.y += M.sin(r.wanderAngle) * spd * 0.6 * (dt / 16);
     }
 
     r.pos.x = clamp(r.pos.x, 35, CFG.WORLD_W - 35);
     r.pos.y = clamp(r.pos.y, 35, CFG.WORLD_H - 35);
-
-    // 射击
-    if (now - r.lastShot >= r.cooldown) {
-      r.lastShot = now;
-      var bang = angleTo(r.pos, player);
-      enemyBullets.push({
-        pos: { x: r.pos.x, y: r.pos.y },
-        vx: M.cos(bang) * CFG.RED_BULLET_SPEED,
-        vy: M.sin(bang) * CFG.RED_BULLET_SPEED,
-        life: 110
-      });
-    }
   }
 
   // ── 绿色外星人 AI ──
@@ -661,22 +677,20 @@ function update(dt) {
     j.rotation += j.rotSpeed * (dt / 16);
   }
 
-  // ── 陨石（4关起）──
-  if (level >= 4) {
-    if (now > nextCometTimer) {
-      var ct = M.max(1, M.floor((level - 2) / 2));
-      if (comets.length < ct + 1) spawnComet();
-      nextCometTimer = now + rand(3000, 6000);
-    }
-    for (var i = comets.length - 1; i >= 0; i--) {
-      var cm = comets[i];
-      cm.pos.x += cm.vx * (dt / 16);
-      cm.pos.y += cm.vy * (dt / 16);
-      cm.life--;
-      if (cm.life <= 0 || cm.pos.x < -100 || cm.pos.x > CFG.WORLD_W + 100 ||
-          cm.pos.y < -100 || cm.pos.y > CFG.WORLD_H + 100) {
-        comets.splice(i, 1);
-      }
+  // ── 陨石（第1关起，随关卡增多）──
+  if (now > nextCometTimer) {
+    var ct = 1 + M.floor(level / 2);  // 第1关=1, 第3关=2, 第5关=3...
+    if (comets.length < ct) spawnComet();
+    nextCometTimer = now + rand(2000, 5000);
+  }
+  for (var i = comets.length - 1; i >= 0; i--) {
+    var cm = comets[i];
+    cm.pos.x += cm.vx * (dt / 16);
+    cm.pos.y += cm.vy * (dt / 16);
+    cm.life--;
+    if (cm.life <= 0 || cm.pos.x < -100 || cm.pos.x > CFG.WORLD_W + 100 ||
+        cm.pos.y < -100 || cm.pos.y > CFG.WORLD_H + 100) {
+      comets.splice(i, 1);
     }
   }
 
